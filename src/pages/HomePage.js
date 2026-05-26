@@ -4,7 +4,7 @@ import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 
 export default function HomePage({ navigate }) {
-  const { location, error, refreshLocation } = useGeolocation();
+  const { location, error } = useGeolocation();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -59,7 +59,7 @@ export default function HomePage({ navigate }) {
       </div>
 
       {/* Location */}
-      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--border)' }}>
+      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
         <span style={{ fontSize: 18 }}>📍</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Sua localização</div>
@@ -67,19 +67,10 @@ export default function HomePage({ navigate }) {
             {manualLocation
               ? manualLocation
               : location
-                ? error
-                  ? 'Jaú, São Paulo'
-                  : `Lat ${location.lat.toFixed(4)}, Lng ${location.lng.toFixed(4)}`
-                : 'Detectando localização...'}
+                ? (error ? 'Jaú, São Paulo' : 'Local detectado')
+                : 'Digite seu endereço abaixo'}
           </div>
         </div>
-        <button
-          className="btn-outline"
-          style={{ flexShrink: 0, minWidth: 100, padding: '10px 12px', fontSize: 12 }}
-          onClick={() => { showToast('📍 Atualizando localização...'); refreshLocation(); setManualLocation(''); }}
-        >
-          Detectar
-        </button>
       </div>
       <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center' }}>
         <input
@@ -88,11 +79,11 @@ export default function HomePage({ navigate }) {
           value={locationText}
           onChange={e => setLocationText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && setManualLocation(locationText)}
-          style={{ flex: 1 }}
+          style={{ flex: 1, padding: '14px 16px', fontSize: 15 }}
         />
         <button
           className="btn-primary"
-          style={{ flexShrink: 0, minWidth: 120, padding: '12px 14px' }}
+          style={{ flexShrink: 0, minWidth: 110, padding: '12px 16px', fontSize: 15 }}
           onClick={() => setManualLocation(locationText)}
         >
           Aplicar
