@@ -1,0 +1,10 @@
+{
+  "short_name": "Lebux",
+  "name": "Lebux - Barbearias",
+  "description": "Encontre e agende na barbearia mais próxima",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0F0F0F",
+  "background_color": "#0F0F0F",
+  "orientation": "portrait"
+}
