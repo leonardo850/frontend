@@ -4,10 +4,12 @@ import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 
 export default function HomePage({ navigate }) {
-  const { location } = useGeolocation();
+  const { location, error, refreshLocation } = useGeolocation();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [locationText, setLocationText] = useState('');
+  const [manualLocation, setManualLocation] = useState('');
   const [category, setCategory] = useState('todos');
   const [toast, setToast] = useState('');
 
@@ -19,8 +21,10 @@ export default function HomePage({ navigate }) {
   const fetchShops = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { search };
-      if (location) { params.lat = location.lat; params.lng = location.lng; params.radius = 20; }
+      const query = [search, manualLocation].filter(Boolean).join(' ').trim();
+      const params = {};
+      if (query) params.search = query;
+      if (!manualLocation && location) { params.lat = location.lat; params.lng = location.lng; params.radius = 20; }
       const { data } = await barbershopsAPI.getAll(params);
       setShops(data.barbershops || []);
     } catch {
@@ -32,7 +36,7 @@ export default function HomePage({ navigate }) {
       ]);
     }
     setLoading(false);
-  }, [location, search]);
+  }, [location, search, manualLocation]);
 
   useEffect(() => { fetchShops(); }, [fetchShops]);
 
@@ -55,13 +59,44 @@ export default function HomePage({ navigate }) {
       </div>
 
       {/* Location */}
-      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => showToast('📍 Detectando localização...')}>
+      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--border)' }}>
         <span style={{ fontSize: 18 }}>📍</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Sua localização</div>
-          <div style={{ fontSize: 14, fontWeight: 500 }}>Jaú, São Paulo</div>
+          <div style={{ fontSize: 14, fontWeight: 500 }}>
+            {manualLocation
+              ? manualLocation
+              : location
+                ? error
+                  ? 'Jaú, São Paulo'
+                  : `Lat ${location.lat.toFixed(4)}, Lng ${location.lng.toFixed(4)}`
+                : 'Detectando localização...'}
+          </div>
         </div>
-        <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 500 }}>Trocar →</span>
+        <button
+          className="btn-outline"
+          style={{ flexShrink: 0, minWidth: 100, padding: '10px 12px', fontSize: 12 }}
+          onClick={() => { showToast('📍 Atualizando localização...'); refreshLocation(); setManualLocation(''); }}
+        >
+          Detectar
+        </button>
+      </div>
+      <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <input
+          className="input-field"
+          placeholder="Digite sua cidade, bairro ou endereço"
+          value={locationText}
+          onChange={e => setLocationText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && setManualLocation(locationText)}
+          style={{ flex: 1 }}
+        />
+        <button
+          className="btn-primary"
+          style={{ flexShrink: 0, minWidth: 120, padding: '12px 14px' }}
+          onClick={() => setManualLocation(locationText)}
+        >
+          Aplicar
+        </button>
       </div>
 
       {/* Search */}
@@ -70,7 +105,7 @@ export default function HomePage({ navigate }) {
         <input
           className="input-field"
           style={{ paddingLeft: 40 }}
-          placeholder="Buscar barbearias ou serviços..."
+          placeholder="Buscar barbearias, serviços ou endereço..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && fetchShops()}
