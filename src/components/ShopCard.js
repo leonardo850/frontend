@@ -1,6 +1,6 @@
 export default function ShopCard({ shop, onClick }) {
   const initials = shop.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const colors = ['#C9A84C', '#27AE60', '#8B6914', '#4A90E2', '#9B59B6'];
+  const colors = ['#4A90E2', '#2F80ED', '#56CCF2', '#9B59B6', '#27AE60'];
   const color = colors[shop.name.charCodeAt(0) % colors.length];
   const minPrice = shop.services?.length ? Math.min(...shop.services.map(s => s.price)) : null;
 

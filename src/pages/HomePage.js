@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useGeolocation } from '../hooks/useGeolocation';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 
 export default function HomePage({ navigate }) {
-  const { location, error } = useGeolocation();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -12,31 +10,108 @@ export default function HomePage({ navigate }) {
   const [manualLocation, setManualLocation] = useState('');
   const [category, setCategory] = useState('todos');
   const [toast, setToast] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2600);
   };
 
+  const fetchAddressSuggestions = async (query) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        setSuggestions([]);
+        return;
+      }
+      const json = await res.json();
+      setSuggestions(json || []);
+      setShowSuggestions(true);
+    } catch {
+      setSuggestions([]);
+    }
+    setLoadingSuggestions(false);
+  };
+
+  const geocodeAddress = async (address) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (!json?.length) return null;
+      return { lat: parseFloat(json[0].lat), lng: parseFloat(json[0].lon) };
+    } catch {
+      return null;
+    }
+  };
+
+  const buildParams = (searchValue = search, manualLocationValue = manualLocation, coords = null) => {
+    const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
+    const params = {};
+    if (query) params.search = query;
+    if (coords) {
+      params.lat = coords.lat;
+      params.lng = coords.lng;
+      params.radius = 20;
+    }
+    return params;
+  };
+
+  const getDemoShops = (location = '') => {
+    const baseShops = [
+      { id: '1', name: 'Barber King', address: 'Rua das Flores, 123', city: 'Jaú', is_open: true, rating: 4.9, total_reviews: 124, distance_km: 0.3, services: [{ price: 30 }] },
+      { id: '2', name: 'Studio 7', address: 'Av. Central, 456', city: 'Jaú', is_open: true, rating: 4.7, total_reviews: 89, distance_km: 0.8, services: [{ price: 25 }] },
+      { id: '3', name: 'Noble Barbers', address: 'Rua Prudente de Moraes, 321', city: 'Jaú', is_open: true, rating: 4.8, total_reviews: 67, distance_km: 1.1, services: [{ price: 45 }] },
+    ];
+    
+    if (location && location.toLowerCase().includes('são paulo')) {
+      return [
+        { id: '1', name: 'Barber King', address: 'Rua Consolação, 2000', city: 'São Paulo', is_open: true, rating: 4.9, total_reviews: 156, distance_km: 0.5, services: [{ price: 35 }] },
+        { id: '2', name: 'Studio 7', address: 'Av. Paulista, 1500', city: 'São Paulo', is_open: true, rating: 4.8, total_reviews: 102, distance_km: 1.2, services: [{ price: 30 }] },
+        { id: '3', name: 'Barber Club', address: 'Rua Oscar Freire, 456', city: 'São Paulo', is_open: true, rating: 4.7, total_reviews: 89, distance_km: 1.8, services: [{ price: 40 }] },
+      ];
+    }
+    
+    return baseShops;
+  };
+
   const fetchShops = useCallback(async () => {
     setLoading(true);
     try {
-      const query = [search, manualLocation].filter(Boolean).join(' ').trim();
-      const params = {};
-      if (query) params.search = query;
-      if (!manualLocation && location) { params.lat = location.lat; params.lng = location.lng; params.radius = 20; }
+      const params = buildParams();
       const { data } = await barbershopsAPI.getAll(params);
       setShops(data.barbershops || []);
     } catch {
-      // Demo fallback
-      setShops([
-        { id: '1', name: 'Barber King', address: 'Rua das Flores, 123', city: 'Jaú', is_open: true, rating: 4.9, total_reviews: 124, distance_km: 0.3, services: [{ price: 30 }] },
-        { id: '2', name: 'Studio 7', address: 'Av. Central, 456', city: 'Jaú', is_open: true, rating: 4.7, total_reviews: 89, distance_km: 0.8, services: [{ price: 25 }] },
-        { id: '3', name: 'Noble Barbers', address: 'Rua Prudente de Moraes, 321', city: 'Jaú', is_open: true, rating: 4.8, total_reviews: 67, distance_km: 1.1, services: [{ price: 45 }] },
-      ]);
+      // Demo fallback com localização do usuário
+      setShops(getDemoShops(manualLocation));
     }
     setLoading(false);
-  }, [location, search, manualLocation]);
+  }, [search, manualLocation]);
+
+  const handleApplyLocation = async () => {
+    const value = locationText.trim();
+    setManualLocation(value);
+    setLoading(true);
+    try {
+      const coords = value ? await geocodeAddress(value) : null;
+      const params = buildParams(search, value, coords);
+      const { data } = await barbershopsAPI.getAll(params);
+      setShops(data.barbershops || []);
+      showToast(value ? 'Local aplicado' : 'Endereço limpo');
+    } catch {
+      // Demo fallback com localização do usuário
+      setShops(getDemoShops(value));
+    }
+    setLoading(false);
+  };
 
   useEffect(() => { fetchShops(); }, [fetchShops]);
 
@@ -59,52 +134,118 @@ export default function HomePage({ navigate }) {
       </div>
 
       {/* Location */}
-      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)' }}>
-        <span style={{ fontSize: 18 }}>📍</span>
+      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '18px', display: 'flex', alignItems: 'flex-start', gap: 14, border: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 24, marginTop: 4 }}>📍</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Sua localização</div>
-          <div style={{ fontSize: 14, fontWeight: 500 }}>
+          <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>
             {manualLocation
               ? manualLocation
-              : location
-                ? (error ? 'Jaú, São Paulo' : 'Local detectado')
-                : 'Digite seu endereço abaixo'}
+              : 'Digite seu endereço abaixo'}
           </div>
         </div>
       </div>
-      <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ margin: '16px 20px 0', position: 'relative' }}>
         <input
           className="input-field"
           placeholder="Digite sua cidade, bairro ou endereço"
           value={locationText}
-          onChange={e => setLocationText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && setManualLocation(locationText)}
-          style={{ flex: 1, padding: '14px 16px', fontSize: 15 }}
+          onChange={(e) => {
+            setLocationText(e.target.value);
+            fetchAddressSuggestions(e.target.value);
+          }}
+          onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          style={{ width: '100%', padding: '18px 16px', fontSize: 16, minHeight: 56 }}
         />
+        {showSuggestions && suggestions.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            background: 'var(--dark2)',
+            border: '1px solid var(--border)',
+            borderTop: 'none',
+            borderRadius: '0 0 12px 12px',
+            maxHeight: 280,
+            overflowY: 'auto',
+            zIndex: 1000,
+            marginTop: -1
+          }}>
+            {suggestions.map((suggestion, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setLocationText(suggestion.display_name);
+                  setManualLocation(suggestion.display_name);
+                  setShowSuggestions(false);
+                  setLoading(true);
+                  geocodeAddress(suggestion.display_name).then(coords => {
+                    const params = buildParams(search, suggestion.display_name, coords);
+                    barbershopsAPI.getAll(params).then(({ data }) => {
+                      setShops(data.barbershops || []);
+                      showToast('Local aplicado');
+                    }).catch(() => {
+                      // Demo fallback com localização do usuário
+                      setShops(getDemoShops(suggestion.display_name));
+                    }).finally(() => setLoading(false));
+                  });
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '14px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  borderBottom: '1px solid var(--border)',
+                  transition: 'background 0.15s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                {suggestion.display_name}
+              </button>
+            ))}
+          </div>
+        )}
         <button
           className="btn-primary"
-          style={{ flexShrink: 0, minWidth: 110, padding: '12px 16px', fontSize: 15 }}
-          onClick={() => setManualLocation(locationText)}
+          style={{ width: '100%', marginTop: 12, padding: '16px 18px', fontSize: 16, minHeight: 52 }}
+          onClick={handleApplyLocation}
         >
           Aplicar
         </button>
       </div>
 
       {/* Search */}
-      <div style={{ margin: '12px 20px 0', position: 'relative' }}>
-        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: 16 }}>🔍</span>
-        <input
-          className="input-field"
-          style={{ paddingLeft: 40 }}
-          placeholder="Buscar barbearias, serviços ou endereço..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && fetchShops()}
-        />
+      <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 0 }}>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: 16 }}>🔍</span>
+          <input
+            className="input-field"
+            style={{ paddingLeft: 40, paddingRight: 16, minHeight: 52, fontSize: 16 }}
+            placeholder="Buscar barbearias, serviços ou endereço..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchShops()}
+          />
+        </div>
+        <button
+          className="btn-primary"
+          style={{ flexShrink: 0, minWidth: 120, padding: '14px 18px', fontSize: 16, minHeight: 52 }}
+          onClick={fetchShops}
+        >
+          Buscar
+        </button>
       </div>
 
       {/* Promo banner */}
-      <div style={{ margin: '16px 20px 0', background: 'linear-gradient(135deg, var(--gold), #8B6914)', borderRadius: 14, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ margin: '16px 20px 0', background: 'linear-gradient(135deg, var(--gold), #6BA8F7)', borderRadius: 14, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontWeight: 700, color: '#0F0F0F', fontSize: 15 }}>Primeira barba grátis!</div>
           <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.6)' }}>Para novos clientes cadastrados</div>
