@@ -156,7 +156,7 @@ export default function HomePage({ navigate }) {
           }}
           onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          style={{ width: '100%', padding: '18px 16px', fontSize: 16, minHeight: 56 }}
+          style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
         />
         {showSuggestions && suggestions.length > 0 && (
           <div style={{
