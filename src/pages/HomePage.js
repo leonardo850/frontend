@@ -128,23 +128,19 @@ export default function HomePage({ navigate }) {
       {toast && <div className="toast-msg">{toast}</div>}
 
       {/* Header */}
-      <div style={{ padding: '20px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="logo-text">LE<span>BUX</span></div>
+      <div style={{ padding: '5px 5px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 50, flex: 1, minWidth: 0 }}>
+          <div className="logo-text">LE<span>BUX</span></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
+              {manualLocation ? manualLocation : 'Digite seu endereço abaixo'}
+            </div>
+          </div>
+        </div>
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      {/* Location */}
-      <div style={{ margin: '16px 20px 0', background: 'var(--dark3)', borderRadius: 12, padding: '18px', display: 'flex', alignItems: 'flex-start', gap: 14, border: '1px solid var(--border)' }}>
-        <span style={{ fontSize: 24, marginTop: 4 }}>📍</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>
-            {manualLocation
-              ? manualLocation
-              : 'Digite seu endereço abaixo'}
-          </div>
-        </div>
-      </div>
       <div style={{ margin: '16px 20px 0', position: 'relative' }}>
         <input
           className="input-field"
