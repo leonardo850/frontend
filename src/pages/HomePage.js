@@ -133,7 +133,7 @@ export default function HomePage({ navigate }) {
           <div className="logo-text">LE<span>BUX</span></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
+            <div style={{ fontSize: 160, fontWeight: 1000, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
               {manualLocation ? manualLocation : 'Digite seu endereço abaixo'}
             </div>
           </div>
