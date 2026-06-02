@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 
@@ -13,6 +13,7 @@ export default function HomePage({ navigate }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const isMountedRef = useRef(true);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -83,18 +84,24 @@ export default function HomePage({ navigate }) {
     return baseShops;
   };
 
-  const fetchShops = useCallback(async () => {
+  const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation) => {
     setLoading(true);
     try {
-      const params = buildParams();
+      const params = buildParams(searchValue, manualLocationValue);
       const { data } = await barbershopsAPI.getAll(params);
-      setShops(data.barbershops || []);
+      if (isMountedRef.current) {
+        setShops(data?.barbershops || []);
+      }
     } catch {
       // Demo fallback com localização do usuário
-      setShops(getDemoShops(manualLocation));
+      if (isMountedRef.current) {
+        setShops(getDemoShops(manualLocationValue));
+      }
     }
-    setLoading(false);
-  }, [search, manualLocation]);
+    if (isMountedRef.current) {
+      setLoading(false);
+    }
+  }, []);
 
   const handleApplyLocation = async () => {
     const value = locationText.trim();
@@ -104,16 +111,28 @@ export default function HomePage({ navigate }) {
       const coords = value ? await geocodeAddress(value) : null;
       const params = buildParams(search, value, coords);
       const { data } = await barbershopsAPI.getAll(params);
-      setShops(data.barbershops || []);
-      showToast(value ? 'Local aplicado' : 'Endereço limpo');
+      if (isMountedRef.current) {
+        setShops(data?.barbershops || []);
+        showToast(value ? 'Local aplicado' : 'Endereço limpo');
+      }
     } catch {
       // Demo fallback com localização do usuário
-      setShops(getDemoShops(value));
+      if (isMountedRef.current) {
+        setShops(getDemoShops(value));
+      }
     }
-    setLoading(false);
+    if (isMountedRef.current) {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchShops(); }, [fetchShops]);
+  useEffect(() => { fetchShops(search, manualLocation); }, [search, manualLocation, fetchShops]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
@@ -172,21 +191,28 @@ export default function HomePage({ navigate }) {
             {suggestions.map((suggestion, idx) => (
               <button
                 key={idx}
-                onClick={() => {
+                onClick={async () => {
                   setLocationText(suggestion.display_name);
                   setManualLocation(suggestion.display_name);
                   setShowSuggestions(false);
                   setLoading(true);
-                  geocodeAddress(suggestion.display_name).then(coords => {
+                  try {
+                    const coords = await geocodeAddress(suggestion.display_name);
                     const params = buildParams(search, suggestion.display_name, coords);
-                    barbershopsAPI.getAll(params).then(({ data }) => {
-                      setShops(data.barbershops || []);
+                    const { data } = await barbershopsAPI.getAll(params);
+                    if (isMountedRef.current) {
+                      setShops(data?.barbershops || []);
                       showToast('Local aplicado');
-                    }).catch(() => {
-                      // Demo fallback com localização do usuário
+                    }
+                  } catch {
+                    // Demo fallback com localização do usuário
+                    if (isMountedRef.current) {
                       setShops(getDemoShops(suggestion.display_name));
-                    }).finally(() => setLoading(false));
-                  });
+                    }
+                  }
+                  if (isMountedRef.current) {
+                    setLoading(false);
+                  }
                 }}
                 style={{
                   display: 'block',
