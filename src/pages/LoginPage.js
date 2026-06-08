@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { validateEmail, validatePassword, passwordStrength } from '../utils/authValidation';
 
 export default function LoginPage({ navigate }) {
   const { user, login, register, logout } = useAuth();
@@ -8,23 +9,35 @@ export default function LoginPage({ navigate }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [emailValid, setEmailValid] = useState(null);
+  const [pwdStrength, setPwdStrength] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2600); };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     setError(''); setLoading(true);
+    const pwdCheck = validatePassword(form.password);
+    if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
     try {
       if (tab === 'login') {
-        await login(form.email, form.password);
+        const identifier = form.email.trim();
+        await login(identifier, form.password);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
-        await register(form.name, form.email, form.password, form.phone);
+        const emailCheck = validateEmail(form.email);
+        if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
+        await register(form.name, emailCheck.value, form.password, form.phone);
       }
       showToast('✅ Bem-vindo à Lebux!');
       setTimeout(() => navigate('home'), 1000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao entrar. Verifique seus dados.');
+      if (tab === 'login') {
+        setError('E-mail ou senha incorretos');
+      } else {
+        setError(err.response?.data?.error || 'Erro ao criar conta. Tente novamente.');
+      }
     }
     setLoading(false);
   };
@@ -91,11 +104,33 @@ export default function LoginPage({ navigate }) {
           <input className="input-field" placeholder="Nome completo" value={form.name}
             onChange={e => set('name', e.target.value)} />
         )}
-        <input className="input-field" placeholder="Email" type="email" value={form.email}
-          onChange={e => set('email', e.target.value)} />
-        <input className="input-field" placeholder="Senha" type="password" value={form.password}
-          onChange={e => set('password', e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+        <div style={{ position: 'relative' }}>
+          <input className="input-field" placeholder={tab === 'login' ? 'Email ou usuário' : 'Email'} type={tab === 'login' ? 'text' : 'email'} value={form.email}
+            onChange={e => {
+              const raw = e.target.value;
+              const norm = raw.trim();
+              set('email', norm);
+              if (tab === 'register') {
+                const res = validateEmail(norm.toLowerCase());
+                setEmailValid(res.ok ? true : res.msg);
+              }
+            }} />
+          {tab === 'register' && emailValid && emailValid === true && <div style={{ position: 'absolute', right: 12, top: 14, color: 'var(--muted)' }}>✓</div>}
+        </div>
+
+        <div style={{ position: 'relative' }}>
+          <input className="input-field" placeholder="Senha" type={showPassword ? 'text' : 'password'} value={form.password}
+            onChange={e => {
+              const v = e.target.value;
+              set('password', v);
+              setPwdStrength(passwordStrength(v));
+            }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          <button type="button" onClick={() => setShowPassword(s => !s)} style={{ position: 'absolute', right: 10, top: 10, background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}>
+            {showPassword ? 'Ocultar' : 'Mostrar'}
+          </button>
+        </div>
+        {pwdStrength && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6 }}>{pwdStrength}</div>}
         {tab === 'register' && (
           <input className="input-field" placeholder="Telefone (opcional)" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
@@ -108,8 +143,18 @@ export default function LoginPage({ navigate }) {
         </button>
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: 20, color: 'var(--muted)', fontSize: 13 }}>
-        Ao continuar, você concorda com os Termos de Uso da Lebux
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, color: 'var(--muted)', fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
+        <span>Ao continuar, você concorda com os Termos de Uso da Lebux</span>
+        {tab === 'login' && (
+          <button
+            type="button"
+            className="btn-link"
+            style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => navigate('forgot-password')}
+          >
+            Esqueci minha senha
+          </button>
+        )}
       </div>
     </div>
   );

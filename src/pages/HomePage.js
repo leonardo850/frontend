@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
@@ -13,7 +14,12 @@ export default function HomePage({ navigate }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [geoConsent, setGeoConsent] = useState('pending');
+  const [radius, setRadius] = useState(10);
+  const [locationCoords, setLocationCoords] = useState(null);
   const isMountedRef = useRef(true);
+  const { location: deviceLocation, error: deviceLocationError, loading: deviceLocationLoading, refreshLocation: requestDeviceLocation } = useGeolocation();
+  const hasLocation = Boolean(manualLocation || (geoConsent === 'granted' && deviceLocation));
 
   const showToast = (msg) => {
     setToast(msg);
@@ -54,14 +60,14 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  const buildParams = (searchValue = search, manualLocationValue = manualLocation, coords = null) => {
+  const buildParams = (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords, radiusValue = radius) => {
     const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
     const params = {};
     if (query) params.search = query;
     if (coords) {
       params.lat = coords.lat;
       params.lng = coords.lng;
-      params.radius = 20;
+      params.radius = radiusValue;
     }
     return params;
   };
@@ -84,10 +90,10 @@ export default function HomePage({ navigate }) {
     return baseShops;
   };
 
-  const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation) => {
+  const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords) => {
     setLoading(true);
     try {
-      const params = buildParams(searchValue, manualLocationValue);
+      const params = buildParams(searchValue, manualLocationValue, coords);
       const { data } = await barbershopsAPI.getAll(params);
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
@@ -101,14 +107,15 @@ export default function HomePage({ navigate }) {
     if (isMountedRef.current) {
       setLoading(false);
     }
-  }, []);
+  }, [search, manualLocation, locationCoords, radius]);
 
   const handleApplyLocation = async () => {
     const value = locationText.trim();
     setManualLocation(value);
     setLoading(true);
     try {
-      const coords = value ? await geocodeAddress(value) : null;
+      const coords = value ? await geocodeAddress(value) : (geoConsent === 'granted' ? deviceLocation : null);
+      setLocationCoords(coords);
       const params = buildParams(search, value, coords);
       const { data } = await barbershopsAPI.getAll(params);
       if (isMountedRef.current) {
@@ -126,13 +133,41 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  useEffect(() => { fetchShops(search, manualLocation); }, [search, manualLocation, fetchShops]);
+  useEffect(() => {
+    if (geoConsent === 'granted' && deviceLocation) {
+      setLocationCoords(deviceLocation);
+      fetchShops(search, manualLocation, deviceLocation);
+    }
+  }, [deviceLocation, geoConsent, search, manualLocation, fetchShops]);
+
+  useEffect(() => {
+    if (locationCoords) {
+      fetchShops(search, manualLocation, locationCoords);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radius, locationCoords]);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (deviceLocationError) {
+      showToast(deviceLocationError);
+    }
+  }, [deviceLocationError]);
+
+  const handleUseDeviceLocation = () => {
+    setGeoConsent('granted');
+    requestDeviceLocation();
+  };
+
+  const handleDenyDeviceLocation = () => {
+    setGeoConsent('denied');
+    showToast('Localização do dispositivo negada. Use o campo de endereço manual.');
+  };
 
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
@@ -153,96 +188,147 @@ export default function HomePage({ navigate }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
             <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
-              {manualLocation ? manualLocation : 'Digite seu endereço abaixo'}
+              {manualLocation ? manualLocation : (geoConsent === 'granted' ? 'Localização do dispositivo em uso' : 'Digite seu endereço abaixo')}
             </div>
           </div>
         </div>
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      <div style={{ margin: '16px 20px 0', position: 'relative' }}>
-        <input
-          className="input-field"
-          placeholder="Digite sua cidade, bairro ou endereço"
-          value={locationText}
-          onChange={(e) => {
-            setLocationText(e.target.value);
-            fetchAddressSuggestions(e.target.value);
-          }}
-          onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
-        />
-        {showSuggestions && suggestions.length > 0 && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--dark2)',
-            border: '1px solid var(--border)',
-            borderTop: 'none',
-            borderRadius: '0 0 12px 12px',
-            maxHeight: 280,
-            overflowY: 'auto',
-            zIndex: 1000,
-            marginTop: -1
-          }}>
-            {suggestions.map((suggestion, idx) => (
+      {(geoConsent === 'pending' || geoConsent === 'denied') && (
+        <div style={{ margin: '16px 20px 0', padding: 18, borderRadius: 16, background: 'var(--dark2)', border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Autorização de uso da localização</div>
+          <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+            Para apresentar barbearias próximas com maior precisão, o Lebux solicita acesso à localização do seu dispositivo. Essa permissão será usada apenas para buscar serviços e exibir resultados mais relevantes na sua região.
+          </div>
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
+            Você pode negar o acesso e inserir manualmente sua cidade, bairro ou endereço.
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <button className="btn-primary" style={{ minWidth: 160 }} onClick={handleUseDeviceLocation}>
+              Permitir localização
+            </button>
+            <button className="btn-secondary" style={{ minWidth: 160, background: 'var(--dark3)', color: 'var(--text)' }} onClick={handleDenyDeviceLocation}>
+              Negar acesso
+            </button>
+          </div>
+          {geoConsent === 'denied' && (
+            <div style={{ marginTop: 12, color: 'var(--muted)', fontSize: 13 }}>
+              Você pode digitar sua cidade, bairro ou endereço abaixo.
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasLocation && locationCoords && (
+        <div style={{ margin: '16px 20px 0', padding: 18, borderRadius: 16, background: 'var(--dark2)', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Raio de busca</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{radius} km</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {[5, 10, 20].map(option => (
               <button
-                key={idx}
-                onClick={async () => {
-                  setLocationText(suggestion.display_name);
-                  setManualLocation(suggestion.display_name);
-                  setShowSuggestions(false);
-                  setLoading(true);
-                  try {
-                    const coords = await geocodeAddress(suggestion.display_name);
-                    const params = buildParams(search, suggestion.display_name, coords);
-                    const { data } = await barbershopsAPI.getAll(params);
-                    if (isMountedRef.current) {
-                      setShops(data?.barbershops || []);
-                      showToast('Local aplicado');
-                    }
-                  } catch {
-                    // Demo fallback com localização do usuário
-                    if (isMountedRef.current) {
-                      setShops(getDemoShops(suggestion.display_name));
-                    }
-                  }
-                  if (isMountedRef.current) {
-                    setLoading(false);
-                  }
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  borderBottom: '1px solid var(--border)',
-                  transition: 'background 0.15s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                key={option}
+                className={option === radius ? 'btn-primary' : 'btn-secondary'}
+                style={{ minWidth: 90, padding: '12px 14px', fontSize: 14, borderRadius: 12, background: option === radius ? 'var(--gold)' : 'var(--dark3)', color: option === radius ? 'var(--dark)' : 'var(--text)' }}
+                onClick={() => setRadius(option)}
               >
-                {suggestion.display_name}
+                {option} km
               </button>
             ))}
           </div>
-        )}
-        <button
-          className="btn-primary"
-          style={{ width: '100%', marginTop: 12, padding: '16px 18px', fontSize: 16, minHeight: 52 }}
-          onClick={handleApplyLocation}
-        >
-          Aplicar
-        </button>
-      </div>
+        </div>
+      )}
+
+      {!hasLocation && (
+        <div style={{ margin: '16px 20px 0', position: 'relative' }}>
+          <input
+            className="input-field"
+            placeholder="Digite sua cidade, bairro ou endereço"
+            value={locationText}
+            onChange={(e) => {
+              setLocationText(e.target.value);
+              fetchAddressSuggestions(e.target.value);
+            }}
+            onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'var(--dark2)',
+              border: '1px solid var(--border)',
+              borderTop: 'none',
+              borderRadius: '0 0 12px 12px',
+              maxHeight: 280,
+              overflowY: 'auto',
+              zIndex: 1000,
+              marginTop: -1
+            }}>
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={async () => {
+                    setLocationText(suggestion.display_name);
+                    setManualLocation(suggestion.display_name);
+                    setShowSuggestions(false);
+                    setLoading(true);
+                    try {
+                      const coords = await geocodeAddress(suggestion.display_name);
+                      setLocationCoords(coords);
+                      const params = buildParams(search, suggestion.display_name, coords);
+                      const { data } = await barbershopsAPI.getAll(params);
+                      if (isMountedRef.current) {
+                        setShops(data?.barbershops || []);
+                        showToast('Local aplicado');
+                      }
+                    } catch {
+                      // Demo fallback com localização do usuário
+                      if (isMountedRef.current) {
+                        setShops(getDemoShops(suggestion.display_name));
+                      }
+                    }
+                    if (isMountedRef.current) {
+                      setLoading(false);
+                    }
+                  }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '14px 16px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    borderBottom: '1px solid var(--border)',
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  {suggestion.display_name}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            className="btn-primary"
+            style={{ width: '100%', marginTop: 12, padding: '16px 18px', fontSize: 16, minHeight: 52 }}
+            onClick={handleApplyLocation}
+          >
+            Aplicar
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

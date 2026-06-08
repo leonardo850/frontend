@@ -26,6 +26,8 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/api/auth/register', data),
   login: (data) => api.post('/api/auth/login', data),
+  forgotPassword: (data) => api.post('/api/auth/forgot', data),
+  resetPassword: (data) => api.post('/api/auth/reset', data),
 };
 
 // Barbershops

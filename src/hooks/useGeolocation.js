@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 export function useGeolocation() {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -19,9 +19,9 @@ export function useGeolocation() {
         setError(null);
         setLoading(false);
       },
-      (err) => {
-        setLocation({ lat: -22.2964, lng: -48.5589 });
-        setError('Usando localização padrão: Jaú, SP');
+      () => {
+        setLocation(null);
+        setError('Não foi possível obter a localização do dispositivo.');
         setLoading(false);
       },
       {
@@ -31,10 +31,6 @@ export function useGeolocation() {
       }
     );
   }, []);
-
-  useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
 
   return { location, error, loading, refreshLocation: requestLocation };
 }
