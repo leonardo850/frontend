@@ -141,11 +141,28 @@ export default function HomePage({ navigate }) {
   }, [deviceLocation, geoConsent, search, manualLocation, fetchShops]);
 
   useEffect(() => {
-    if (locationCoords) {
-      fetchShops(search, manualLocation, locationCoords);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radius, locationCoords]);
+    if (!locationCoords) return;
+
+    const loadShops = async () => {
+      setLoading(true);
+      try {
+        const params = buildParams(search, manualLocation, locationCoords, radius);
+        const { data } = await barbershopsAPI.getAll(params);
+        if (isMountedRef.current) {
+          setShops(data?.barbershops || []);
+        }
+      } catch {
+        if (isMountedRef.current) {
+          setShops(getDemoShops(manualLocation));
+        }
+      }
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    };
+
+    loadShops();
+  }, [radius, locationCoords, search, manualLocation]);
 
   useEffect(() => {
     return () => {
