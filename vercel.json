@@ -1,8 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
-  ]
+  "buildCommand": "chmod +x ./node_modules/.bin/react-scripts && react-scripts build",
+  "framework": "create-react-app"
 }
