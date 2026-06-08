@@ -17,6 +17,7 @@ export default function HomePage({ navigate }) {
   const [geoConsent, setGeoConsent] = useState('pending');
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
+  const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const isMountedRef = useRef(true);
   const { location: deviceLocation, error: deviceLocationError, loading: deviceLocationLoading, refreshLocation: requestDeviceLocation } = useGeolocation();
   const hasLocation = Boolean(manualLocation || (geoConsent === 'granted' && deviceLocation));
@@ -24,6 +25,23 @@ export default function HomePage({ navigate }) {
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2600);
+  };
+
+  const fetchGooglePlaceSuggestions = async (query) => {
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&language=pt-BR&key=${googleMapsKey}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      if (json.status !== 'OK' || !json.predictions?.length) return [];
+      return json.predictions.map((prediction) => ({
+        id: prediction.place_id,
+        label: prediction.description,
+        place_id: prediction.place_id,
+        source: 'google',
+      }));
+    } catch {
+      return [];
+    }
   };
 
   const fetchAddressSuggestions = async (query) => {
@@ -34,27 +52,80 @@ export default function HomePage({ navigate }) {
     }
     setLoadingSuggestions(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`);
-      if (!res.ok) {
-        setSuggestions([]);
-        return;
+      let suggestionsData = [];
+      if (googleMapsKey) {
+        suggestionsData = await fetchGooglePlaceSuggestions(query);
       }
-      const json = await res.json();
-      setSuggestions(json || []);
-      setShowSuggestions(true);
+      if (!suggestionsData.length) {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const json = await res.json();
+          suggestionsData = (json || []).map((item) => ({
+            id: item.place_id || item.lat + item.lon,
+            label: item.display_name,
+            source: 'osm',
+          }));
+        }
+      }
+      setSuggestions(suggestionsData);
+      setShowSuggestions(suggestionsData.length > 0);
     } catch {
       setSuggestions([]);
     }
     setLoadingSuggestions(false);
   };
 
+  const googleGeocodeAddress = async (address) => {
+    if (!googleMapsKey) return null;
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsKey}`);
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.status !== 'OK' || !json.results?.length) return null;
+      const location = json.results[0].geometry.location;
+      return { lat: location.lat, lng: location.lng };
+    } catch {
+      return null;
+    }
+  };
+
+  const googleReverseGeocode = async ({ lat, lng }) => {
+    if (!googleMapsKey) return null;
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsKey}`);
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json.status !== 'OK' || !json.results?.length) return null;
+      return json.results[0].formatted_address || null;
+    } catch {
+      return null;
+    }
+  };
+
   const geocodeAddress = async (address) => {
+    const googleResult = await googleGeocodeAddress(address);
+    if (googleResult) return googleResult;
+
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
       if (!res.ok) return null;
       const json = await res.json();
       if (!json?.length) return null;
       return { lat: parseFloat(json[0].lat), lng: parseFloat(json[0].lon) };
+    } catch {
+      return null;
+    }
+  };
+
+  const reverseGeocode = async ({ lat, lng }) => {
+    const googleResult = await googleReverseGeocode({ lat, lng });
+    if (googleResult) return googleResult;
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json?.display_name || null;
     } catch {
       return null;
     }
@@ -136,9 +207,19 @@ export default function HomePage({ navigate }) {
   useEffect(() => {
     if (geoConsent === 'granted' && deviceLocation) {
       setLocationCoords(deviceLocation);
+
+      const loadDeviceAddress = async () => {
+        const address = await reverseGeocode(deviceLocation);
+        if (isMountedRef.current && address) {
+          setManualLocation(address);
+          setLocationText(address);
+        }
+      };
+
+      loadDeviceAddress();
       fetchShops(search, manualLocation, deviceLocation);
     }
-  }, [deviceLocation, geoConsent, search, manualLocation, fetchShops]);
+  }, [deviceLocation, geoConsent, search, fetchShops]);
 
   useEffect(() => {
     if (!locationCoords) return;
@@ -299,23 +380,37 @@ export default function HomePage({ navigate }) {
                 <button
                   key={idx}
                   onClick={async () => {
-                    setLocationText(suggestion.display_name);
-                    setManualLocation(suggestion.display_name);
+                    setLocationText(suggestion.label);
+                    setManualLocation(suggestion.label);
                     setShowSuggestions(false);
                     setLoading(true);
                     try {
-                      const coords = await geocodeAddress(suggestion.display_name);
+                      let coords = null;
+                      if (suggestion.source === 'google') {
+                        const detailsRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&fields=formatted_address,geometry&key=${googleMapsKey}`);
+                        if (detailsRes.ok) {
+                          const detailsJson = await detailsRes.json();
+                          if (detailsJson.status === 'OK' && detailsJson.result?.geometry?.location) {
+                            coords = {
+                              lat: detailsJson.result.geometry.location.lat,
+                              lng: detailsJson.result.geometry.location.lng,
+                            };
+                          }
+                        }
+                      }
+                      if (!coords) {
+                        coords = await geocodeAddress(suggestion.label);
+                      }
                       setLocationCoords(coords);
-                      const params = buildParams(search, suggestion.display_name, coords);
+                      const params = buildParams(search, suggestion.label, coords);
                       const { data } = await barbershopsAPI.getAll(params);
                       if (isMountedRef.current) {
                         setShops(data?.barbershops || []);
                         showToast('Local aplicado');
                       }
                     } catch {
-                      // Demo fallback com localização do usuário
                       if (isMountedRef.current) {
-                        setShops(getDemoShops(suggestion.display_name));
+                        setShops(getDemoShops(suggestion.label));
                       }
                     }
                     if (isMountedRef.current) {
