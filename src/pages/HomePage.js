@@ -318,7 +318,7 @@ export default function HomePage({ navigate }) {
         </div>
       )}
 
-      {hasLocation && locationCoords && (
+      {hasLocation && locationCoords && !manualLocation && (
         <div style={{ margin: '16px 20px 0', padding: 18, borderRadius: 16, background: 'var(--dark2)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
