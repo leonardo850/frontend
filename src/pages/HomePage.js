@@ -318,35 +318,6 @@ export default function HomePage({ navigate }) {
         </div>
       )}
 
-      {hasLocation && locationCoords && !manualLocation && (
-        <div style={{ margin: '16px 20px 0', padding: 18, borderRadius: 16, background: 'var(--dark2)', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Local selecionado</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
-                {manualLocation || 'Localização do dispositivo em uso'}
-              </div>
-            </div>
-            <div style={{ minWidth: 180, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label htmlFor="radius-select" style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Raio de busca</label>
-              <select
-                id="radius-select"
-                value={radius}
-                onChange={(e) => setRadius(Number(e.target.value))}
-                style={{ minWidth: 180, padding: '12px 14px', fontSize: 15, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--dark3)', color: 'var(--text)' }}
-              >
-                {[5, 10, 20].map(option => (
-                  <option key={option} value={option}>{option} km</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ marginTop: 14, color: 'var(--muted)', fontSize: 13 }}>
-            Exibindo estabelecimentos próximos ao local selecionado, com base nas coordenadas definidas.
-          </div>
-        </div>
-      )}
-
       {!hasLocation && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
           <input
@@ -502,7 +473,7 @@ export default function HomePage({ navigate }) {
       <div style={{ margin: '20px 0 0' }}>
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">{manualLocation ? 'Próximas do local selecionado' : 'Próximas de você'}</div>
+            <div className="section-title">{manualLocation ? 'Próximas da sua localização' : 'Próximas de você'}</div>
             {manualLocation && (
               <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Baseado na localização escolhida: {manualLocation}</div>
             )}
