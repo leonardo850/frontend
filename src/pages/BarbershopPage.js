@@ -44,7 +44,7 @@ export default function BarbershopPage({ shop, navigate }) {
         <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, color: 'var(--gold)', letterSpacing: 2, marginBottom: 4 }}>
           {fullShop?.name?.toUpperCase()}
         </div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>📍 {fullShop?.address}, {fullShop?.city}</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>📍 {fullShop?.address}{fullShop?.city ? `, ${fullShop?.city}` : ''}</div>
         {fullShop?.phone && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>📞 {fullShop.phone}</div>}
 
         {/* Stats */}
@@ -52,7 +52,7 @@ export default function BarbershopPage({ shop, navigate }) {
           {[
             { val: fullShop?.rating || '4.9', lbl: 'Avaliação' },
             { val: fullShop?.total_reviews || '120', lbl: 'Avaliações' },
-            { val: fullShop?.is_open ? 'Aberto' : 'Fechado', lbl: 'Status' },
+            { val: fullShop?.is_open === true ? 'Aberto' : fullShop?.is_open === false ? 'Fechado' : '—', lbl: 'Status' },
           ].map((s, i) => (
             <div key={i} style={{ background: 'var(--dark3)', borderRadius: 12, padding: '12px', textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--gold)' }}>{s.val}</div>

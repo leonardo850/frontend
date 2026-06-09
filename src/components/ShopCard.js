@@ -16,10 +16,10 @@ export default function ShopCard({ shop, onClick }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
           <div style={{ fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>{shop.name}</div>
-          <span className={shop.is_open ? 'badge-open' : 'badge-closed'}>{shop.is_open ? 'Aberto' : 'Fechado'}</span>
+          <span className={shop.is_open === true ? 'badge-open' : 'badge-closed'}>{shop.is_open === true ? 'Aberto' : shop.is_open === false ? 'Fechado' : '—'}</span>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          📍 {shop.address}, {shop.city}
+          📍 {shop.address}{shop.city ? `, ${shop.city}` : ''}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
