@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { AuthProvider } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
+import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import BarbershopPage from './pages/BarbershopPage';
 import BookingPage from './pages/BookingPage';
@@ -9,60 +10,91 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import './App.css';
 
+function RequireAuth({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
-  const [screen, setScreen] = useState('home'); // home | barbershop | booking | appointments | login | reset-password
+  const { user } = useAuth();
+  const navigateRouter = useNavigate();
+  const location = useLocation();
   const [selectedShop, setSelectedShop] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
-  const [activeNav, setActiveNav] = useState('home');
   const [resetToken, setResetToken] = useState('');
 
+  // generic navigate helper for existing components expecting `navigate(screen, data)`
   const navigate = (to, data = {}) => {
-    setScreen(to);
     if (data.shop) setSelectedShop(data.shop);
     if (data.service) setSelectedService(data.service);
     if (data.token) setResetToken(data.token);
-    window.scrollTo(0, 0);
-  };
 
-  const navItems = [
-    { id: 'home', icon: '🏠', label: 'Início' },
-    { id: 'appointments', icon: '📅', label: 'Agendados' },
-    { id: 'login', icon: '👤', label: 'Perfil' },
-  ];
+    switch (to) {
+      case 'home': return navigateRouter('/');
+      case 'barbershop': return navigateRouter('/barbershop');
+      case 'booking': return navigateRouter('/booking');
+      case 'appointments': return navigateRouter('/appointments');
+      case 'login': return navigateRouter('/login');
+      case 'forgot-password': return navigateRouter('/forgot-password');
+      case 'reset-password': return navigateRouter('/reset-password');
+      default: return navigateRouter('/');
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     if (token) {
       setResetToken(token);
-      setScreen('reset-password');
+      navigateRouter('/reset-password');
     }
-  }, []);
+  }, [navigateRouter]);
 
   return (
-    <AuthProvider>
-      <div className="app-shell">
-        {screen === 'home' && <HomePage navigate={navigate} />}
-        {screen === 'barbershop' && <BarbershopPage shop={selectedShop} navigate={navigate} />}
-        {screen === 'booking' && <BookingPage shop={selectedShop} service={selectedService} navigate={navigate} />}
-        {screen === 'appointments' && <AppointmentsPage navigate={navigate} />}
-        {screen === 'login' && <LoginPage navigate={navigate} />}
-        {screen === 'forgot-password' && <ForgotPasswordPage navigate={navigate} />}
-        {screen === 'reset-password' && <ResetPasswordPage navigate={navigate} token={resetToken} />}
+    <div className="app-shell">
+      <Routes>
+        <Route path="/" element={<RequireAuth><HomePage navigate={navigate} /></RequireAuth>} />
+        <Route path="/barbershop" element={<RequireAuth><BarbershopPage shop={selectedShop} navigate={navigate} /></RequireAuth>} />
+        <Route path="/booking" element={<RequireAuth><BookingPage shop={selectedShop} service={selectedService} navigate={navigate} /></RequireAuth>} />
+        <Route path="/appointments" element={<RequireAuth><AppointmentsPage navigate={navigate} /></RequireAuth>} />
+        <Route path="/login" element={<LoginPage navigate={navigate} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage navigate={navigate} />} />
+        <Route path="/reset-password" element={<ResetPasswordPage navigate={navigate} token={resetToken} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
-        <nav className="bottom-nav">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              className={`nav-btn ${activeNav === item.id ? 'active' : ''}`}
-              onClick={() => { setActiveNav(item.id); navigate(item.id); }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-    </AuthProvider>
+      {/* bottom nav: show different items depending on authentication; hide on auth pages */}
+      {(() => {
+        const hideOn = ['/login', '/forgot-password', '/reset-password'];
+        const hideNav = hideOn.includes(location.pathname);
+        if (hideNav) return null;
+        return (
+          <nav className="bottom-nav">
+            {user ? (
+              <>
+                <button className={`nav-btn`} onClick={() => navigate('home')}>
+                  <span className="nav-icon">🏠</span>
+                  <span className="nav-label">Início</span>
+                </button>
+                <button className={`nav-btn`} onClick={() => navigate('appointments')}>
+                  <span className="nav-icon">📅</span>
+                  <span className="nav-label">Agendados</span>
+                </button>
+                <button className={`nav-btn`} onClick={() => navigate('login')}>
+                  <span className="nav-icon">👤</span>
+                  <span className="nav-label">Perfil</span>
+                </button>
+              </>
+            ) : (
+              <button className={`nav-btn`} onClick={() => navigate('login')}>
+                <span className="nav-icon">👤</span>
+                <span className="nav-label">Entrar</span>
+              </button>
+            )}
+          </nav>
+        );
+      })()}
+    </div>
   );
 }
