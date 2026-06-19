@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { authAPI } from '../lib/api';
 import { validateEmail, validatePassword, passwordStrength } from '../utils/authValidation';
 
 export default function LoginPage({ navigate }) {
@@ -41,6 +42,11 @@ export default function LoginPage({ navigate }) {
     setLoading(false);
   };
 
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '' });
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+
   if (user) {
     return (
       <div className="page" style={{ padding: '20px' }}>
@@ -71,6 +77,38 @@ export default function LoginPage({ navigate }) {
             <span style={{ color: 'var(--muted)' }}>›</span>
           </button>
         ))}
+
+        {/* Alterar senha */}
+        <button onClick={() => { setShowChangePwd(s => !s); setPwdError(''); }}
+          style={{ width: '100%', background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 8, textAlign: 'left' }}>
+          <span style={{ fontSize: 18 }}>🔑</span>
+          <span style={{ flex: 1 }}>Alterar senha</span>
+          <span style={{ color: 'var(--muted)' }}>{showChangePwd ? '▲' : '▼'}</span>
+        </button>
+        {showChangePwd && (
+          <div style={{ background: 'var(--dark3)', borderRadius: 12, padding: 16, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input className="input-field" placeholder="Senha atual" type="password" value={pwdForm.current}
+              onChange={e => setPwdForm(f => ({ ...f, current: e.target.value }))} />
+            <input className="input-field" placeholder="Nova senha (mín. 8 caracteres)" type="password" value={pwdForm.newPwd}
+              onChange={e => setPwdForm(f => ({ ...f, newPwd: e.target.value }))} />
+            {pwdError && <div className="error-msg" style={{ margin: 0 }}>{pwdError}</div>}
+            <button className="btn-primary" disabled={pwdLoading} onClick={async () => {
+              setPwdError('');
+              if (!pwdForm.current || !pwdForm.newPwd) { setPwdError('Preencha ambos os campos'); return; }
+              if (pwdForm.newPwd.length < 8) { setPwdError('Mínimo 8 caracteres'); return; }
+              setPwdLoading(true);
+              try {
+                await authAPI.changePassword({ current_password: pwdForm.current, new_password: pwdForm.newPwd });
+                showToast('✅ Senha alterada!');
+                setPwdForm({ current: '', newPwd: '' });
+                setShowChangePwd(false);
+              } catch (err) {
+                setPwdError(err.response?.data?.error || 'Erro ao alterar senha');
+              }
+              setPwdLoading(false);
+            }}>{pwdLoading ? 'ALTERANDO...' : 'SALVAR'}</button>
+          </div>
+        )}
 
         <button className="btn-outline" style={{ marginTop: 12, color: 'var(--red)', borderColor: 'rgba(231,76,60,0.3)' }} onClick={() => { logout(); navigate('home'); }}>
           Sair da conta
