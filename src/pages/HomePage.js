@@ -170,7 +170,7 @@ export default function HomePage({ navigate }) {
         setShops(data?.barbershops || []);
       }
     } catch {
-      // Demo fallback com localização do usuário
+      console.error('Erro ao buscar barbearias da API');
       if (isMountedRef.current) {
         setShops(getDemoShops(manualLocationValue));
       }
@@ -194,7 +194,7 @@ export default function HomePage({ navigate }) {
         showToast(value ? 'Local aplicado' : 'Endereço limpo');
       }
     } catch {
-      // Demo fallback com localização do usuário
+      console.error('Erro ao aplicar localização');
       if (isMountedRef.current) {
         setShops(getDemoShops(value));
       }
@@ -233,6 +233,7 @@ export default function HomePage({ navigate }) {
           setShops(data?.barbershops || []);
         }
       } catch {
+        console.error('Erro ao carregar barbearias');
         if (isMountedRef.current) {
           setShops(getDemoShops(manualLocation));
         }
@@ -380,6 +381,7 @@ export default function HomePage({ navigate }) {
                         showToast('Local aplicado');
                       }
                     } catch {
+                      console.error('Erro ao buscar barbearias para sugestão');
                       if (isMountedRef.current) {
                         setShops(getDemoShops(suggestion.label));
                       }

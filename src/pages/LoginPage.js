@@ -18,16 +18,15 @@ export default function LoginPage({ navigate }) {
 
   const handleSubmit = async () => {
     setError(''); setLoading(true);
-    const pwdCheck = validatePassword(form.password);
-    if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
     try {
       if (tab === 'login') {
-        const identifier = form.email.trim();
-        await login(identifier, form.password);
+        await login(form.email.trim(), form.password);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
         if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
+        const pwdCheck = validatePassword(form.password);
+        if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
         await register(form.name, emailCheck.value, form.password, form.phone);
       }
       showToast('✅ Bem-vindo à Lebux!');
