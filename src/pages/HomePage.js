@@ -14,7 +14,8 @@ export default function HomePage({ navigate }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [geoConsent, setGeoConsent] = useState('pending');
+  const savedGeo = localStorage.getItem('lebux_geo');
+  const [geoConsent, setGeoConsent] = useState(savedGeo || 'pending');
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
   const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
@@ -258,14 +259,10 @@ export default function HomePage({ navigate }) {
     }
   }, [deviceLocationError]);
 
-  const handleUseDeviceLocation = () => {
-    setGeoConsent('granted');
-    requestDeviceLocation();
-  };
-
-  const handleDenyDeviceLocation = () => {
-    setGeoConsent('denied');
-    showToast('Localização do dispositivo negada. Use o campo de endereço manual.');
+  const handleGeoPermission = (allow) => {
+    localStorage.setItem('lebux_geo', allow ? 'granted' : 'denied');
+    setGeoConsent(allow ? 'granted' : 'denied');
+    if (allow) requestDeviceLocation();
   };
 
   const categories = [
@@ -294,28 +291,14 @@ export default function HomePage({ navigate }) {
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      {(geoConsent === 'pending' || geoConsent === 'denied') && (
-        <div style={{ margin: '16px 20px 0', padding: 18, borderRadius: 16, background: 'var(--dark2)', border: '1px solid var(--border)' }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Autorização de uso da localização</div>
-          <div style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
-            Para apresentar barbearias próximas com maior precisão, o Lebux solicita acesso à localização do seu dispositivo. Essa permissão será usada apenas para buscar serviços e exibir resultados mais relevantes na sua região.
-          </div>
-          <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-            Você pode negar o acesso e inserir manualmente sua cidade, bairro ou endereço.
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            <button className="btn-primary" style={{ minWidth: 160 }} onClick={handleUseDeviceLocation}>
-              Permitir localização
-            </button>
-            <button className="btn-secondary" style={{ minWidth: 160, background: 'var(--dark3)', color: 'var(--text)' }} onClick={handleDenyDeviceLocation}>
-              Negar acesso
-            </button>
-          </div>
-          {geoConsent === 'denied' && (
-            <div style={{ marginTop: 12, color: 'var(--muted)', fontSize: 13 }}>
-              Você pode digitar sua cidade, bairro ou endereço abaixo.
-            </div>
-          )}
+      {geoConsent === 'pending' && (
+        <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 12, background: 'var(--dark2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="checkbox" id="geo-check"
+            onChange={e => handleGeoPermission(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: 'var(--gold)', cursor: 'pointer', flexShrink: 0 }} />
+          <label htmlFor="geo-check" style={{ fontSize: 13, color: 'var(--text)', cursor: 'pointer', flex: 1 }}>
+            Usar localização do dispositivo para buscar barbearias próximas
+          </label>
         </div>
       )}
 
