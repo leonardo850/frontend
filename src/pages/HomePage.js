@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
@@ -17,7 +18,8 @@ export default function HomePage({ navigate }) {
   const [locationCoords, setLocationCoords] = useState(null);
   const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const isMountedRef = useRef(true);
-  const hasLocation = Boolean(manualLocation);
+  const { location: deviceLocation, loading: deviceLocationLoading } = useGeolocation();
+  const hasLocation = Boolean(manualLocation || deviceLocation);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -227,6 +229,22 @@ export default function HomePage({ navigate }) {
   }, [radius, locationCoords, search, manualLocation]);
 
   useEffect(() => {
+    if (!deviceLocation) return;
+
+    setLocationCoords(deviceLocation);
+
+    const loadDeviceAddress = async () => {
+      const address = await reverseGeocode(deviceLocation);
+      if (isMountedRef.current && address) {
+        setManualLocation(address);
+        setLocationText(address);
+      }
+    };
+
+    loadDeviceAddress();
+  }, [deviceLocation]);
+
+  useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
@@ -258,7 +276,7 @@ export default function HomePage({ navigate }) {
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      {!hasLocation && (
+      {!hasLocation && !deviceLocationLoading && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
           <input
             className="input-field"
