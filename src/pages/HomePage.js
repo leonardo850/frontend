@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
-import { useGeolocation } from '../hooks/useGeolocation';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
@@ -14,14 +13,11 @@ export default function HomePage({ navigate }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const savedGeo = localStorage.getItem('lebux_geo');
-  const [geoConsent, setGeoConsent] = useState(savedGeo || 'pending');
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
   const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const isMountedRef = useRef(true);
-  const { location: deviceLocation, error: deviceLocationError, loading: deviceLocationLoading, refreshLocation: requestDeviceLocation } = useGeolocation();
-  const hasLocation = Boolean(manualLocation || (geoConsent === 'granted' && deviceLocation));
+  const hasLocation = Boolean(manualLocation);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -186,7 +182,7 @@ export default function HomePage({ navigate }) {
     setManualLocation(value);
     setLoading(true);
     try {
-      const coords = value ? await geocodeAddress(value) : (geoConsent === 'granted' ? deviceLocation : null);
+      const coords = value ? await geocodeAddress(value) : null;
       setLocationCoords(coords);
       const params = buildParams(search, value, coords);
       const { data } = await barbershopsAPI.getAll(params);
@@ -204,23 +200,6 @@ export default function HomePage({ navigate }) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (geoConsent === 'granted' && deviceLocation) {
-      setLocationCoords(deviceLocation);
-
-      const loadDeviceAddress = async () => {
-        const address = await reverseGeocode(deviceLocation);
-        if (isMountedRef.current && address) {
-          setManualLocation(address);
-          setLocationText(address);
-        }
-      };
-
-      loadDeviceAddress();
-      fetchShops(search, manualLocation, deviceLocation);
-    }
-  }, [deviceLocation, geoConsent, search, fetchShops]);
 
   useEffect(() => {
     if (!locationCoords) return;
@@ -253,18 +232,6 @@ export default function HomePage({ navigate }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (deviceLocationError) {
-      showToast(deviceLocationError);
-    }
-  }, [deviceLocationError]);
-
-  const handleGeoPermission = (allow) => {
-    localStorage.setItem('lebux_geo', allow ? 'granted' : 'denied');
-    setGeoConsent(allow ? 'granted' : 'denied');
-    if (allow) requestDeviceLocation();
-  };
-
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
     { id: 'corte', label: 'Corte', icon: '💈' },
@@ -284,23 +251,12 @@ export default function HomePage({ navigate }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
             <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
-              {manualLocation ? manualLocation : (geoConsent === 'granted' ? 'Localização do dispositivo em uso' : 'Digite seu endereço abaixo')}
+              {manualLocation ? manualLocation : 'Digite seu endereço abaixo'}
             </div>
           </div>
         </div>
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
-
-      {geoConsent === 'pending' && (
-        <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 12, background: 'var(--dark2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="geo-check"
-            onChange={e => handleGeoPermission(e.target.checked)}
-            style={{ width: 18, height: 18, accentColor: 'var(--gold)', cursor: 'pointer', flexShrink: 0 }} />
-          <label htmlFor="geo-check" style={{ fontSize: 13, color: 'var(--text)', cursor: 'pointer', flex: 1 }}>
-            Usar localização do dispositivo para buscar barbearias próximas
-          </label>
-        </div>
-      )}
 
       {!hasLocation && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
