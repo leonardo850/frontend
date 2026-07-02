@@ -5,7 +5,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
   const [manualLocation, setManualLocation] = useState('');
@@ -243,6 +243,15 @@ export default function HomePage({ navigate }) {
 
     loadDeviceAddress();
   }, [deviceLocation]);
+
+  const fetchedRef = useRef(false);
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    if (deviceLocationLoading) return;
+    if (deviceLocation) return;
+    fetchedRef.current = true;
+    fetchShops();
+  }, [deviceLocationLoading, deviceLocation, fetchShops]);
 
   useEffect(() => {
     return () => {
