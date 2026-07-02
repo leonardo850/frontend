@@ -20,14 +20,11 @@ export default function LoginPage({ navigate }) {
   const handleSubmit = async () => {
     setError(''); setLoading(true);
     try {
-      if (tab === 'company') {
+      if (tab === 'login') {
         await login(form.email.trim(), form.password);
+        const savedUser = JSON.parse(localStorage.getItem('lebux_user') || '{}');
         showToast('✅ Bem-vindo!');
-        setTimeout(() => navigate('company'), 1000);
-      } else if (tab === 'login') {
-        await login(form.email.trim(), form.password);
-        showToast('✅ Bem-vindo à Lebux!');
-        setTimeout(() => navigate('home'), 1000);
+        setTimeout(() => navigate(savedUser.role === 'company' ? 'company' : 'home'), 1000);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
@@ -39,13 +36,7 @@ export default function LoginPage({ navigate }) {
         setTimeout(() => navigate('home'), 1000);
       }
     } catch (err) {
-      if (tab === 'company') {
-        setError('CNPJ ou senha incorretos');
-      } else if (tab === 'login') {
-        setError('E-mail ou senha incorretos');
-      } else {
-        setError(err.response?.data?.error || 'Erro ao criar conta. Tente novamente.');
-      }
+      setError(tab === 'login' ? 'E-mail, CNPJ ou senha incorretos' : (err.response?.data?.error || 'Erro ao criar conta. Tente novamente.'));
     }
     setLoading(false);
   };
@@ -164,10 +155,10 @@ export default function LoginPage({ navigate }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', background: 'var(--dark3)', borderRadius: 10, padding: 4, marginBottom: 24 }}>
-        {['login', 'register', 'company'].map(t => (
+        {['login', 'register'].map(t => (
           <button key={t} onClick={() => { setTab(t); setError(''); }}
             style={{ flex: 1, background: tab === t ? 'var(--surface)' : 'transparent', border: 'none', borderRadius: 8, padding: '10px', color: tab === t ? 'var(--text)' : 'var(--muted)', fontSize: 14, fontWeight: tab === t ? 600 : 400, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: '.2s' }}>
-            {t === 'login' ? 'Entrar' : t === 'register' ? 'Cadastrar' : 'Empresa'}
+            {t === 'login' ? 'Entrar' : 'Cadastrar'}
           </button>
         ))}
       </div>
@@ -178,24 +169,22 @@ export default function LoginPage({ navigate }) {
             onChange={e => set('name', e.target.value)} />
         )}
 
-        {tab === 'company' ? (
-          <input className="input-field" placeholder="CNPJ (apenas números)" value={form.email}
-            onChange={e => set('email', e.target.value.replace(/\D/g, '').slice(0, 14))} />
-        ) : (
-          <div style={{ position: 'relative' }}>
-            <input className="input-field" placeholder={tab === 'login' ? 'Email ou usuário' : 'Email'} type={tab === 'login' ? 'text' : 'email'} value={form.email}
-              onChange={e => {
-                const raw = e.target.value;
-                const norm = raw.trim();
-                set('email', norm);
-                if (tab === 'register') {
-                  const res = validateEmail(norm.toLowerCase());
-                  setEmailValid(res.ok ? true : res.msg);
-                }
-              }} />
-            {tab === 'register' && emailValid && emailValid === true && <div style={{ position: 'absolute', right: 12, top: 14, color: 'var(--muted)' }}>✓</div>}
-          </div>
-        )}
+        <div style={{ position: 'relative' }}>
+          <input className="input-field"
+            placeholder={tab === 'login' ? 'Email ou CNPJ' : 'Email'}
+            type="text"
+            value={form.email}
+            onChange={e => {
+              const raw = e.target.value;
+              const norm = raw.trim();
+              set('email', tab === 'login' ? norm : norm);
+              if (tab === 'register') {
+                const res = validateEmail(norm.toLowerCase());
+                setEmailValid(res.ok ? true : res.msg);
+              }
+            }} />
+          {tab === 'register' && emailValid && emailValid === true && <div style={{ position: 'absolute', right: 12, top: 14, color: 'var(--muted)' }}>✓</div>}
+        </div>
 
         <div style={{ position: 'relative' }}>
           <input className="input-field" placeholder="Senha" type={showPassword ? 'text' : 'password'} value={form.password}
@@ -218,7 +207,7 @@ export default function LoginPage({ navigate }) {
         {error && <div className="error-msg">{error}</div>}
 
         <button className="btn-primary" style={{ marginTop: 8 }} onClick={handleSubmit} disabled={loading}>
-          {loading ? 'AGUARDE...' : tab === 'company' ? 'ENTRAR COMO EMPRESA' : tab === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
+          {loading ? 'AGUARDE...' : tab === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
         </button>
       </div>
 
