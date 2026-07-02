@@ -8,6 +8,7 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import CompanyPage from './pages/CompanyPage';
 import './App.css';
 
 function RequireAuth({ children }) {
@@ -35,6 +36,7 @@ export default function App() {
       case 'barbershop': return navigateRouter('/barbershop');
       case 'booking': return navigateRouter('/booking');
       case 'appointments': return navigateRouter('/appointments');
+      case 'company': return navigateRouter('/company');
       case 'login': return navigateRouter('/login');
       case 'forgot-password': return navigateRouter('/forgot-password');
       case 'reset-password': return navigateRouter('/reset-password');
@@ -61,6 +63,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage navigate={navigate} />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage navigate={navigate} />} />
         <Route path="/reset-password" element={<ResetPasswordPage navigate={navigate} token={resetToken} />} />
+        <Route path="/company" element={<RequireAuth><CompanyPage navigate={navigate} /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
@@ -73,10 +76,17 @@ export default function App() {
           <nav className="bottom-nav">
             {user ? (
               <>
-                <button className={`nav-btn`} onClick={() => navigate('home')}>
-                  <span className="nav-icon">🏠</span>
-                  <span className="nav-label">Início</span>
-                </button>
+                {user.role === 'company' ? (
+                  <button className={`nav-btn`} onClick={() => navigate('company')}>
+                    <span className="nav-icon">💼</span>
+                    <span className="nav-label">Empresa</span>
+                  </button>
+                ) : (
+                  <button className={`nav-btn`} onClick={() => navigate('home')}>
+                    <span className="nav-icon">🏠</span>
+                    <span className="nav-label">Início</span>
+                  </button>
+                )}
                 <button className={`nav-btn`} onClick={() => navigate('appointments')}>
                   <span className="nav-icon">📅</span>
                   <span className="nav-label">Agendados</span>

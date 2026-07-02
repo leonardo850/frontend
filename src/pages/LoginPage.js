@@ -20,8 +20,14 @@ export default function LoginPage({ navigate }) {
   const handleSubmit = async () => {
     setError(''); setLoading(true);
     try {
-      if (tab === 'login') {
+      if (tab === 'company') {
         await login(form.email.trim(), form.password);
+        showToast('✅ Bem-vindo!');
+        setTimeout(() => navigate('company'), 1000);
+      } else if (tab === 'login') {
+        await login(form.email.trim(), form.password);
+        showToast('✅ Bem-vindo à Lebux!');
+        setTimeout(() => navigate('home'), 1000);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
@@ -29,11 +35,13 @@ export default function LoginPage({ navigate }) {
         const pwdCheck = validatePassword(form.password);
         if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
         await register(form.name, emailCheck.value, form.password, form.phone);
+        showToast('✅ Bem-vindo à Lebux!');
+        setTimeout(() => navigate('home'), 1000);
       }
-      showToast('✅ Bem-vindo à Lebux!');
-      setTimeout(() => navigate('home'), 1000);
     } catch (err) {
-      if (tab === 'login') {
+      if (tab === 'company') {
+        setError('CNPJ ou senha incorretos');
+      } else if (tab === 'login') {
         setError('E-mail ou senha incorretos');
       } else {
         setError(err.response?.data?.error || 'Erro ao criar conta. Tente novamente.');
@@ -48,6 +56,35 @@ export default function LoginPage({ navigate }) {
   const [pwdError, setPwdError] = useState('');
 
   if (user) {
+    if (user.role === 'company') {
+      return (
+        <div className="page" style={{ padding: '20px' }}>
+          <div style={{ padding: '0 0 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+            <div className="logo-text" style={{ fontSize: 24 }}>{user.name}</div>
+          </div>
+          <div style={{ background: 'var(--dark3)', borderRadius: 16, padding: '20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#0F0F0F' }}>
+              {user.name?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 16 }}>{user.name}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>CNPJ: {user.cnpj}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>{user.email}</div>
+            </div>
+          </div>
+
+          <button onClick={() => navigate('company')}
+            style={{ width: '100%', background: 'var(--gold)', border: 'none', borderRadius: 12, padding: '16px', color: '#0F0F0F', fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 15, marginBottom: 12 }}>
+            Acessar Painel da Empresa →
+          </button>
+
+          <button className="btn-outline" style={{ marginTop: 12, color: 'var(--red)', borderColor: 'rgba(231,76,60,0.3)', width: '100%' }} onClick={() => { logout(); navigate('home'); }}>
+            Sair da conta
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="page" style={{ padding: '20px' }}>
         <div style={{ padding: '0 0 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
@@ -78,7 +115,6 @@ export default function LoginPage({ navigate }) {
           </button>
         ))}
 
-        {/* Alterar senha */}
         <button onClick={() => { setShowChangePwd(s => !s); setPwdError(''); }}
           style={{ width: '100%', background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 8, textAlign: 'left' }}>
           <span style={{ fontSize: 18 }}>🔑</span>
@@ -128,10 +164,10 @@ export default function LoginPage({ navigate }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', background: 'var(--dark3)', borderRadius: 10, padding: 4, marginBottom: 24 }}>
-        {['login', 'register'].map(t => (
+        {['login', 'register', 'company'].map(t => (
           <button key={t} onClick={() => { setTab(t); setError(''); }}
             style={{ flex: 1, background: tab === t ? 'var(--surface)' : 'transparent', border: 'none', borderRadius: 8, padding: '10px', color: tab === t ? 'var(--text)' : 'var(--muted)', fontSize: 14, fontWeight: tab === t ? 600 : 400, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: '.2s' }}>
-            {t === 'login' ? 'Entrar' : 'Cadastrar'}
+            {t === 'login' ? 'Entrar' : t === 'register' ? 'Cadastrar' : 'Empresa'}
           </button>
         ))}
       </div>
@@ -141,33 +177,39 @@ export default function LoginPage({ navigate }) {
           <input className="input-field" placeholder="Nome completo" value={form.name}
             onChange={e => set('name', e.target.value)} />
         )}
-        <div style={{ position: 'relative' }}>
-          <input className="input-field" placeholder={tab === 'login' ? 'Email ou usuário' : 'Email'} type={tab === 'login' ? 'text' : 'email'} value={form.email}
-            onChange={e => {
-              const raw = e.target.value;
-              const norm = raw.trim();
-              set('email', norm);
-              if (tab === 'register') {
-                const res = validateEmail(norm.toLowerCase());
-                setEmailValid(res.ok ? true : res.msg);
-              }
-            }} />
-          {tab === 'register' && emailValid && emailValid === true && <div style={{ position: 'absolute', right: 12, top: 14, color: 'var(--muted)' }}>✓</div>}
-        </div>
+
+        {tab === 'company' ? (
+          <input className="input-field" placeholder="CNPJ (apenas números)" value={form.email}
+            onChange={e => set('email', e.target.value.replace(/\D/g, '').slice(0, 14))} />
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <input className="input-field" placeholder={tab === 'login' ? 'Email ou usuário' : 'Email'} type={tab === 'login' ? 'text' : 'email'} value={form.email}
+              onChange={e => {
+                const raw = e.target.value;
+                const norm = raw.trim();
+                set('email', norm);
+                if (tab === 'register') {
+                  const res = validateEmail(norm.toLowerCase());
+                  setEmailValid(res.ok ? true : res.msg);
+                }
+              }} />
+            {tab === 'register' && emailValid && emailValid === true && <div style={{ position: 'absolute', right: 12, top: 14, color: 'var(--muted)' }}>✓</div>}
+          </div>
+        )}
 
         <div style={{ position: 'relative' }}>
           <input className="input-field" placeholder="Senha" type={showPassword ? 'text' : 'password'} value={form.password}
             onChange={e => {
               const v = e.target.value;
               set('password', v);
-              setPwdStrength(passwordStrength(v));
+              if (tab === 'register') setPwdStrength(passwordStrength(v));
             }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           <button type="button" onClick={() => setShowPassword(s => !s)} style={{ position: 'absolute', right: 10, top: 10, background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}>
             {showPassword ? 'Ocultar' : 'Mostrar'}
           </button>
         </div>
-        {pwdStrength && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6 }}>{pwdStrength}</div>}
+        {tab === 'register' && pwdStrength && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6 }}>{pwdStrength}</div>}
         {tab === 'register' && (
           <input className="input-field" placeholder="Telefone (opcional)" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
@@ -176,19 +218,15 @@ export default function LoginPage({ navigate }) {
         {error && <div className="error-msg">{error}</div>}
 
         <button className="btn-primary" style={{ marginTop: 8 }} onClick={handleSubmit} disabled={loading}>
-          {loading ? 'AGUARDE...' : tab === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
+          {loading ? 'AGUARDE...' : tab === 'company' ? 'ENTRAR COMO EMPRESA' : tab === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
         </button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, color: 'var(--muted)', fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
         <span>Ao continuar, você concorda com os Termos de Uso da Lebux</span>
         {tab === 'login' && (
-          <button
-            type="button"
-            className="btn-link"
-            style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={() => navigate('forgot-password')}
-          >
+          <button type="button" className="btn-link" style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => navigate('forgot-password')}>
             Esqueci minha senha
           </button>
         )}
