@@ -67,6 +67,13 @@ export default function CompanyPage({ navigate }) {
   const [services, setServices] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // Estado para horários de funcionamento
+  const [hours, setHours] = useState([]);
+  const [hoursShopId, setHoursShopId] = useState('');
+  const [savingHours, setSavingHours] = useState(false);
+
+  const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
   const handleSlotClick = (date, time) => {
     setSelectedAppt(null);
     setShowCreateForm(true);
@@ -101,6 +108,26 @@ export default function CompanyPage({ navigate }) {
     setLoading(false);
   }, []);
 
+  const fetchHours = useCallback(async (shopId) => {
+    if (!shopId) { setHours([]); return; }
+    try {
+      const { data: res } = await api.get(`/api/company/hours/${shopId}`);
+      if (res?.hours?.length) setHours(res.hours);
+    } catch { setHours([]); }
+  }, []);
+
+  const handleSaveHours = async () => {
+    if (!hoursShopId) return;
+    setSavingHours(true);
+    try {
+      const { data: res } = await api.put(`/api/company/hours/${hoursShopId}`, { hours });
+      showToast(res?.message || 'Horários salvos!');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Erro ao salvar horários');
+    }
+    setSavingHours(false);
+  };
+
   const fetchShops = useCallback(async () => {
     try {
       const { data: res } = await api.get('/api/company/barbershops');
@@ -112,7 +139,8 @@ export default function CompanyPage({ navigate }) {
     if (tab === 'dashboard') fetchReports();
     else if (tab === 'clients') fetchClients();
     else if (tab === 'appointments') { fetchAppointments(); fetchShops(); }
-  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops]);
+    else if (tab === 'hours') { fetchShops(); fetchHours(hoursShopId); }
+  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops, fetchHours, hoursShopId]);
 
   const handleSearchClient = async () => {
     if (!newAppt.client_search) return;
@@ -193,6 +221,7 @@ export default function CompanyPage({ navigate }) {
           { key: 'dashboard', label: '📊 Dashboard' },
           { key: 'clients', label: '👥 Clientes' },
           { key: 'appointments', label: '📅 Agendamentos' },
+          { key: 'hours', label: '🕐 Horários' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             style={{ flex: 1, background: tab === t.key ? 'var(--surface)' : 'transparent', border: 'none', borderRadius: 8, padding: '10px 6px', color: tab === t.key ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: tab === t.key ? 600 : 400, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: '.2s' }}>
@@ -447,6 +476,61 @@ export default function CompanyPage({ navigate }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Horários de funcionamento */}
+      {tab === 'hours' && (
+        <div style={{ padding: '0 20px' }}>
+          <select style={{ width: '100%', padding: '12px 14px', fontSize: 14, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', marginBottom: 16 }}
+            value={hoursShopId} onChange={e => { setHoursShopId(e.target.value); fetchHours(e.target.value); }}>
+            <option value="">Selecione uma barbearia</option>
+            {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+
+          {hoursShopId && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {hours.map((h, i) => (
+                <div key={h.day_of_week} style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{DAY_NAMES[h.day_of_week]}</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={h.is_open !== false}
+                        onChange={e => {
+                          const updated = [...hours];
+                          updated[i] = { ...updated[i], is_open: e.target.checked };
+                          setHours(updated);
+                        }} />
+                      Aberto
+                    </label>
+                  </div>
+                  {h.is_open !== false && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input type="time" value={h.open_time || '09:00'}
+                        onChange={e => {
+                          const updated = [...hours];
+                          updated[i] = { ...updated[i], open_time: e.target.value };
+                          setHours(updated);
+                        }}
+                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
+                      <span style={{ color: 'var(--muted)', fontSize: 13 }}>até</span>
+                      <input type="time" value={h.close_time || '19:00'}
+                        onChange={e => {
+                          const updated = [...hours];
+                          updated[i] = { ...updated[i], close_time: e.target.value };
+                          setHours(updated);
+                        }}
+                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button className="btn-primary" disabled={savingHours} onClick={handleSaveHours}
+                style={{ padding: '12px', fontSize: 14, marginTop: 4 }}>
+                {savingHours ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
+              </button>
             </div>
           )}
         </div>
