@@ -14,6 +14,50 @@ export default function CompanyPage({ navigate }) {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2600); };
 
+  // Estado do calendário e filtros
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const [calendarDate, setCalendarDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [slotFilter, setSlotFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('');
+  const [selectedAppt, setSelectedAppt] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const firstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+  const calendarDays = [];
+  const y = calendarDate.getFullYear();
+  const m = calendarDate.getMonth();
+  const dim = daysInMonth(y, m);
+  const prevDim = daysInMonth(y, m - 1);
+  for (let i = firstDayOfMonth(y, m) - 1; i >= 0; i--) {
+    calendarDays.push({ day: prevDim - i, month: m - 1, year: i === 0 && m === 0 ? y - 1 : y });
+  }
+  for (let d = 1; d <= dim; d++) {
+    calendarDays.push({ day: d, month: m, year: y });
+  }
+  while (calendarDays.length < 42) {
+    const last = calendarDays[calendarDays.length - 1];
+    calendarDays.push({ day: last.day + 1, month: last.month + (last.day >= 28 && last.month === m ? 1 : 0), year: last.month === 11 && last.day >= 28 ? y + 1 : y });
+  }
+
+  // Mapear agendamentos por data
+  const dayAppointments = {};
+  for (const a of appointments) {
+    if (!dayAppointments[a.date]) dayAppointments[a.date] = [];
+    dayAppointments[a.date].push(a);
+  }
+
+  // Gerar slots de 30min (09:00 - 18:00)
+  const timeSlots = [];
+  for (let h = 9; h < 18; h++) {
+    for (let m2 = 0; m2 < 60; m2 += 30) {
+      timeSlots.push(`${String(h).padStart(2, '0')}:${String(m2).padStart(2, '0')}`);
+    }
+  }
+
   // Form para novo agendamento
   const [newAppt, setNewAppt] = useState({
     user_id: '', client_search: '', barbershop_id: '', service_id: '',
@@ -22,6 +66,13 @@ export default function CompanyPage({ navigate }) {
   const [clientResults, setClientResults] = useState([]);
   const [services, setServices] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleSlotClick = (date, time) => {
+    setSelectedAppt(null);
+    setShowCreateForm(true);
+    setNewAppt(prev => ({ ...prev, date, start_time: time, barbershop_id: '', service_id: '', user_id: '', client_search: '', notes: '' }));
+    setServices([]);
+  };
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -103,7 +154,9 @@ export default function CompanyPage({ navigate }) {
         notes: newAppt.notes,
       });
       showToast('Agendamento criado!');
+      setShowCreateForm(false);
       setNewAppt({ user_id: '', client_search: '', barbershop_id: '', service_id: '', date: '', start_time: '', notes: '' });
+      setServices([]);
       fetchAppointments();
     } catch (err) {
       showToast(err.response?.data?.error || 'Erro ao criar');
@@ -209,29 +262,149 @@ export default function CompanyPage({ navigate }) {
       {/* Agendamentos */}
       {tab === 'appointments' && (
         <div style={{ padding: '0 20px' }}>
-          {/* Novo agendamento */}
-          <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Novo Agendamento para Cliente</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ position: 'relative' }}>
-                <input className="input-field" placeholder="Buscar cliente por nome ou email..."
-                  value={newAppt.client_search}
-                  onChange={e => setNewAppt(prev => ({ ...prev, client_search: e.target.value, user_id: '' }))}
-                  onKeyDown={e => e.key === 'Enter' && handleSearchClient()}
-                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
-                {clientResults.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: '0 0 8px 8px', zIndex: 10, maxHeight: 160, overflowY: 'auto' }}>
-                    {clientResults.map(c => (
-                      <button key={c.id} onClick={() => handleSelectClient(c)}
-                        style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text)', textAlign: 'left', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-                        {c.name} — {c.email}
-                      </button>
-                    ))}
-                  </div>
-                )}
+          {/* Filtros */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <select style={{ flex: 1, minWidth: 120, padding: '10px 12px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }}
+              value={newAppt.barbershop_id} onChange={e => { setNewAppt(prev => ({ ...prev, barbershop_id: e.target.value, service_id: '' })); handleShopChange(e.target.value); }}>
+              <option value="">Todas barbearias</option>
+              {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select style={{ padding: '10px 12px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }}
+              value={slotFilter} onChange={e => setSlotFilter(e.target.value)}>
+              <option value="all">Todos</option>
+              <option value="free">Livre</option>
+              <option value="occupied">Ocupado</option>
+            </select>
+          </div>
+          <input className="input-field" placeholder="Filtrar por cliente..."
+            value={clientFilter} onChange={e => setClientFilter(e.target.value)}
+            style={{ width: '100%', padding: '12px 14px', fontSize: 14, marginBottom: 12 }} />
+
+          {/* Calendário */}
+          <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: 18 }}>‹</button>
+              <div style={{ fontWeight: 600, fontSize: 16 }}>
+                {calendarDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              </div>
+              <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', fontSize: 18 }}>›</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
+              {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => <div key={d} style={{ padding: '4px 0' }}>{d}</div>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {calendarDays.map((day, i) => {
+                if (!day) return <div key={`e-${i}`} />;
+                const dateStr = `${day.year}-${String(day.month + 1).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+                const hasAppt = dayAppointments[dateStr]?.length > 0;
+                const isSelected = dateStr === selectedDate;
+                const isToday = dateStr === todayStr;
+                return (
+                  <button key={dateStr} onClick={() => setSelectedDate(dateStr)}
+                    style={{
+                      background: isSelected ? 'var(--gold)' : isToday ? 'var(--dark3)' : 'transparent',
+                      color: isSelected ? '#0F0F0F' : hasAppt ? 'var(--gold)' : 'var(--text)',
+                      border: isToday && !isSelected ? '1px solid var(--gold)' : '1px solid transparent',
+                      borderRadius: 8, padding: '6px 0', cursor: 'pointer', fontSize: 13, fontWeight: isSelected ? 700 : 400,
+                      opacity: day.month !== calendarDate.getMonth() ? 0.3 : 1,
+                      position: 'relative',
+                    }}>
+                    {day.day}
+                    {hasAppt && <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--gold)', margin: '2px auto 0' }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Grade de horários */}
+          {selectedDate && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  {dayAppointments[selectedDate]?.length || 0} agendamentos
+                </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 6 }}>
+                {timeSlots.map(slot => {
+                  const filteredDayAppts = newAppt.barbershop_id
+                    ? (dayAppointments[selectedDate] || []).filter(a => a.barbershop_id === newAppt.barbershop_id)
+                    : (dayAppointments[selectedDate] || []);
+                  const apt = filteredDayAppts.find(a => a.start_time === slot);
+                  const isOccupied = !!apt;
+                  if (slotFilter === 'free' && isOccupied) return null;
+                  if (slotFilter === 'occupied' && !isOccupied) return null;
+                  if (clientFilter && isOccupied && !apt.users?.name?.toLowerCase().includes(clientFilter.toLowerCase())) return null;
+
+                  return (
+                    <button key={slot} onClick={() => isOccupied ? setSelectedAppt(apt) : handleSlotClick(selectedDate, slot)}
+                      style={{
+                        background: isOccupied ? 'rgba(231,76,60,0.15)' : 'rgba(46,204,113,0.1)',
+                        border: `1px solid ${isOccupied ? 'rgba(231,76,60,0.3)' : 'rgba(46,204,113,0.3)'}`,
+                        borderRadius: 8, padding: '8px 10px', cursor: 'pointer',
+                        textAlign: 'left', fontFamily: 'DM Sans, sans-serif', width: '100%',
+                      }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: isOccupied ? 'var(--red)' : '#2ecc71' }}>{slot}</div>
+                      {isOccupied ? (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{apt.users?.name}</div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: '#2ecc71', marginTop: 2 }}>Livre</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Detalhes do agendamento selecionado */}
+          {selectedAppt && (
+            <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedAppt.users?.name}</div>
+                <button onClick={() => setSelectedAppt(null)} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                <div>{selectedAppt.barbershops?.name} — {selectedAppt.services?.name}</div>
+                <div>{selectedAppt.date} às {selectedAppt.start_time}</div>
+                <div>R$ {selectedAppt.price} | Status: {selectedAppt.status}</div>
+                {selectedAppt.notes && <div>Obs: {selectedAppt.notes}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Novo agendamento (aparece ao clicar em slot livre) */}
+          {showCreateForm && (
+            <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>Novo Agendamento</div>
+                <button onClick={() => setShowCreateForm(false)} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 13, color: 'var(--gold)', marginBottom: 4 }}>{selectedDate} às {newAppt.start_time}</div>
+                <div style={{ position: 'relative' }}>
+                  <input className="input-field" placeholder="Buscar cliente por nome ou email..."
+                    value={newAppt.client_search}
+                    onChange={e => setNewAppt(prev => ({ ...prev, client_search: e.target.value, user_id: '' }))}
+                    onKeyDown={e => e.key === 'Enter' && handleSearchClient()}
+                    style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+                  {clientResults.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: '0 0 8px 8px', zIndex: 10, maxHeight: 160, overflowY: 'auto' }}>
+                      {clientResults.map(c => (
+                        <button key={c.id} onClick={() => handleSelectClient(c)}
+                          style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text)', textAlign: 'left', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
+                          {c.name} — {c.email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <select className="input-field" style={{ padding: '12px 14px', fontSize: 14 }}
                   value={newAppt.barbershop_id} onChange={e => handleShopChange(e.target.value)}>
                   <option value="">Barbearia</option>
@@ -242,47 +415,38 @@ export default function CompanyPage({ navigate }) {
                   <option value="">Serviço</option>
                   {services.map(s => <option key={s.id} value={s.id}>{s.name} — R${s.price}</option>)}
                 </select>
+                <input className="input-field" placeholder="Observações (opcional)" value={newAppt.notes}
+                  onChange={e => setNewAppt(prev => ({ ...prev, notes: e.target.value }))}
+                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+                <button className="btn-primary" disabled={submitting} onClick={handleCreateAppointment}
+                  style={{ padding: '12px', fontSize: 14 }}>
+                  {submitting ? 'AGENDANDO...' : 'CONFIRMAR AGENDAMENTO'}
+                </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <input className="input-field" type="date" value={newAppt.date}
-                  onChange={e => setNewAppt(prev => ({ ...prev, date: e.target.value }))}
-                  style={{ padding: '12px 14px', fontSize: 14 }} />
-                <input className="input-field" type="time" value={newAppt.start_time}
-                  onChange={e => setNewAppt(prev => ({ ...prev, start_time: e.target.value }))}
-                  style={{ padding: '12px 14px', fontSize: 14 }} />
-              </div>
-              <input className="input-field" placeholder="Observações (opcional)" value={newAppt.notes}
-                onChange={e => setNewAppt(prev => ({ ...prev, notes: e.target.value }))}
-                style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
-              <button className="btn-primary" disabled={submitting} onClick={handleCreateAppointment}
-                style={{ padding: '12px', fontSize: 14 }}>
-                {submitting ? 'AGENDANDO...' : 'CONFIRMAR AGENDAMENTO'}
-              </button>
             </div>
-          </div>
+          )}
 
-          {/* Lista de agendamentos */}
-          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Todos os Agendamentos</div>
-          {loading ? (
-            <div className="loading"><div className="spinner" /></div>
-          ) : appointments.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>Nenhum agendamento</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 80 }}>
-              {appointments.map(a => (
-                <div key={a.id} style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{a.users?.name || 'Cliente'}</div>
-                      <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{a.barbershops?.name} — {a.services?.name}</div>
+          {/* Lista de agendamentos do dia */}
+          {selectedDate && dayAppointments[selectedDate]?.length > 0 && (
+            <div style={{ paddingBottom: 60 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Agendamentos do dia</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dayAppointments[selectedDate]
+                  .filter(a => !newAppt.barbershop_id || a.barbershop_id === newAppt.barbershop_id)
+                  .filter(a => !clientFilter || a.users?.name?.toLowerCase().includes(clientFilter.toLowerCase()))
+                  .map(a => (
+                  <div key={a.id} style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer' }}
+                    onClick={() => setSelectedAppt(a)}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{a.users?.name || 'Cliente'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{a.start_time} — {a.services?.name}</div>
+                      </div>
+                      <span className={`status-badge status-${a.status}`}>{a.status}</span>
                     </div>
-                    <span className={`status-badge status-${a.status}`}>{a.status}</span>
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>
-                    {a.date} às {a.start_time} | R$ {a.price}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
