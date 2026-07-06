@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     const { data } = await authAPI.login({ email, password });
     localStorage.setItem('lebux_token', data.token);
     localStorage.setItem('lebux_user', JSON.stringify(data.user));
+    localStorage.setItem('lebux_is_company', data.isCompany ? 'true' : '');
     setUser(data.user);
     return data;
   }, []);
@@ -28,6 +29,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('lebux_token');
     localStorage.removeItem('lebux_user');
+    localStorage.removeItem('lebux_is_company');
     setUser(null);
   }, []);
 

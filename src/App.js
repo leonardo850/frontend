@@ -76,7 +76,7 @@ export default function App() {
           <nav className="bottom-nav">
             {user ? (
               <>
-                {user.role === 'company' ? (
+                {localStorage.getItem('lebux_is_company') === 'true' ? (
                   <button className={`nav-btn`} onClick={() => navigate('company')}>
                     <span className="nav-icon">💼</span>
                     <span className="nav-label">Empresa</span>

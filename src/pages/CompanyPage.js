@@ -111,7 +111,8 @@ export default function CompanyPage({ navigate }) {
     setSubmitting(false);
   };
 
-  if (!user || user.role !== 'company') {
+  const isCompany = localStorage.getItem('lebux_is_company') === 'true';
+  if (!user || !isCompany) {
     return (
       <div className="page" style={{ padding: 40, textAlign: 'center' }}>
         <div style={{ color: 'var(--muted)', marginBottom: 16 }}>Acesso restrito a empresas</div>

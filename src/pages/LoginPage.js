@@ -22,9 +22,9 @@ export default function LoginPage({ navigate }) {
     try {
       if (tab === 'login') {
         await login(form.email.trim(), form.password);
-        const savedUser = JSON.parse(localStorage.getItem('lebux_user') || '{}');
+        const isCompany = localStorage.getItem('lebux_is_company') === 'true';
         showToast('✅ Bem-vindo!');
-        setTimeout(() => navigate(savedUser.role === 'company' ? 'company' : 'home'), 1000);
+        setTimeout(() => navigate(isCompany ? 'company' : 'home'), 1000);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
@@ -47,7 +47,8 @@ export default function LoginPage({ navigate }) {
   const [pwdError, setPwdError] = useState('');
 
   if (user) {
-    if (user.role === 'company') {
+    const isCompany = localStorage.getItem('lebux_is_company') === 'true';
+    if (isCompany) {
       return (
         <div className="page" style={{ padding: '20px' }}>
           <div style={{ padding: '0 0 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
@@ -59,7 +60,6 @@ export default function LoginPage({ navigate }) {
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 16 }}>{user.name}</div>
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>CNPJ: {user.cnpj}</div>
               <div style={{ color: 'var(--muted)', fontSize: 13 }}>{user.email}</div>
             </div>
           </div>
