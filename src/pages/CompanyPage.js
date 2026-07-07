@@ -67,6 +67,9 @@ export default function CompanyPage({ navigate }) {
   const [services, setServices] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // Estado para horários na aba agendamentos
+  const [apptHours, setApptHours] = useState([]);
+
   // Estado para horários de funcionamento
   const [hours, setHours] = useState([]);
   const [hoursShopId, setHoursShopId] = useState('');
@@ -128,6 +131,14 @@ export default function CompanyPage({ navigate }) {
     setSavingHours(false);
   };
 
+  const fetchApptHours = useCallback(async (shopId) => {
+    if (!shopId) { setApptHours([]); return; }
+    try {
+      const { data: res } = await api.get(`/api/company/hours/${shopId}`);
+      if (res?.hours?.length) setApptHours(res.hours);
+    } catch { setApptHours([]); }
+  }, []);
+
   const fetchShops = useCallback(async () => {
     try {
       const { data: res } = await api.get('/api/company/barbershops');
@@ -138,9 +149,9 @@ export default function CompanyPage({ navigate }) {
   useEffect(() => {
     if (tab === 'dashboard') fetchReports();
     else if (tab === 'clients') fetchClients();
-    else if (tab === 'appointments') { fetchAppointments(); fetchShops(); }
+    else if (tab === 'appointments') { fetchAppointments(); fetchShops(); fetchApptHours(newAppt.barbershop_id); }
     else if (tab === 'hours') { fetchShops(); fetchHours(hoursShopId); }
-  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops, fetchHours, hoursShopId]);
+  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops, fetchHours, hoursShopId, fetchApptHours]);
 
   const handleSearchClient = async () => {
     if (!newAppt.client_search) return;
@@ -159,7 +170,8 @@ export default function CompanyPage({ navigate }) {
 
   const handleShopChange = async (shopId) => {
     setNewAppt(prev => ({ ...prev, barbershop_id: shopId, service_id: '' }));
-    if (!shopId) { setServices([]); return; }
+    if (!shopId) { setServices([]); setApptHours([]); return; }
+    fetchApptHours(shopId);
     try {
       const { data: shopData } = await api.get(`/api/barbershops/${shopId}`);
       setServices(shopData?.services || []);
@@ -360,6 +372,16 @@ export default function CompanyPage({ navigate }) {
                 </span>
               </div>
 
+              {/* Check if day is open */}
+              {(() => {
+                const dow = new Date(selectedDate + 'T12:00:00').getDay();
+                const dayHour = apptHours.find(h => h.day_of_week === dow);
+                if (dayHour && dayHour.is_open === false) {
+                  return <div style={{ textAlign: 'center', padding: '24px', color: 'var(--muted)', fontSize: 14 }}>🔴 Dia fechado para agendamentos</div>;
+                }
+                return null;
+              })()}
+              {(!apptHours.length || apptHours.find(h => h.day_of_week === new Date(selectedDate + 'T12:00:00').getDay())?.is_open !== false) && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 6 }}>
                 {timeSlots.map(slot => {
                   const filteredDayAppts = newAppt.barbershop_id
@@ -389,6 +411,7 @@ export default function CompanyPage({ navigate }) {
                   );
                 })}
               </div>
+              )}
             </div>
           )}
 
