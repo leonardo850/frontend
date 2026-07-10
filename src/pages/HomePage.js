@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
@@ -11,13 +12,11 @@ export default function HomePage({ navigate }) {
   const [manualLocation, setManualLocation] = useState('');
   const [category, setCategory] = useState('todos');
   const [toast, setToast] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
   const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const isMountedRef = useRef(true);
+  const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions(googleMapsKey);
   const { location: deviceLocation, loading: deviceLocationLoading } = useGeolocation();
   const hasLocation = Boolean(manualLocation || deviceLocation);
 
@@ -26,53 +25,6 @@ export default function HomePage({ navigate }) {
     setTimeout(() => setToast(''), 2600);
   };
 
-  const fetchGooglePlaceSuggestions = async (query) => {
-    try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&language=pt-BR&key=${googleMapsKey}`);
-      if (!res.ok) return [];
-      const json = await res.json();
-      if (json.status !== 'OK' || !json.predictions?.length) return [];
-      return json.predictions.map((prediction) => ({
-        id: prediction.place_id,
-        label: prediction.description,
-        place_id: prediction.place_id,
-        source: 'google',
-      }));
-    } catch {
-      return [];
-    }
-  };
-
-  const fetchAddressSuggestions = async (query) => {
-    if (!query || query.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setLoadingSuggestions(true);
-    try {
-      let suggestionsData = [];
-      if (googleMapsKey) {
-        suggestionsData = await fetchGooglePlaceSuggestions(query);
-      }
-      if (!suggestionsData.length) {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(query)}`);
-        if (res.ok) {
-          const json = await res.json();
-          suggestionsData = (json || []).map((item) => ({
-            id: item.place_id || item.lat + item.lon,
-            label: item.display_name,
-            source: 'osm',
-          }));
-        }
-      }
-      setSuggestions(suggestionsData);
-      setShowSuggestions(suggestionsData.length > 0);
-    } catch {
-      setSuggestions([]);
-    }
-    setLoadingSuggestions(false);
-  };
 
   const googleGeocodeAddress = async (address) => {
     if (!googleMapsKey) return null;
@@ -292,8 +244,9 @@ export default function HomePage({ navigate }) {
             placeholder="Digite sua cidade, bairro ou endereço"
             value={locationText}
             onChange={(e) => {
-              setLocationText(e.target.value);
-              fetchAddressSuggestions(e.target.value);
+              const nextValue = e.target.value;
+              setLocationText(nextValue);
+              scheduleAddressSuggestions(nextValue);
             }}
             onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}

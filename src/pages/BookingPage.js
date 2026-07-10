@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { barbershopsAPI, appointmentsAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 export default function BookingPage({ shop, service, navigate }) {
   const { user } = useAuth();
+  const location = useLocation();
+  const locationState = location.state || {};
+  const activeShop = shop || locationState.shop;
+  const activeService = service || locationState.service;
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [slots, setSlots] = useState([]);
@@ -27,9 +32,9 @@ export default function BookingPage({ shop, service, navigate }) {
   }, []);
 
   useEffect(() => {
-    if (!selectedDate || !shop?.id) return;
+    if (!selectedDate || !activeShop?.id || !activeService?.id) return;
     setLoading(true);
-    barbershopsAPI.getAvailability(shop.id, selectedDate, service?.id)
+    barbershopsAPI.getAvailability(activeShop.id, selectedDate, activeService.id)
       .then(({ data }) => setSlots(data.slots || []))
       .catch(() => {
         // Demo slots
@@ -43,16 +48,16 @@ export default function BookingPage({ shop, service, navigate }) {
         setSlots(demo);
       })
       .finally(() => setLoading(false));
-  }, [selectedDate, shop?.id]);
+  }, [selectedDate, activeShop?.id, activeService?.id]);
 
   const handleConfirm = async () => {
     if (!user) { navigate('login'); return; }
-    if (!selectedDate || !selectedTime) return;
+    if (!selectedDate || !selectedTime || !activeShop || !activeService) return;
     setConfirming(true);
     try {
       await appointmentsAPI.create({
-        barbershop_id: shop.id,
-        service_id: service.id,
+        barbershop_id: activeShop.id,
+        service_id: activeService.id,
         date: selectedDate,
         start_time: selectedTime,
       });
@@ -69,7 +74,7 @@ export default function BookingPage({ shop, service, navigate }) {
       {toast && <div className="toast-msg">{toast}</div>}
 
       <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 14, borderBottom: '1px solid var(--border)' }}>
-        <button className="back-btn" onClick={() => navigate('barbershop', { shop })}>←</button>
+        <button className="back-btn" onClick={() => navigate('barbershop', { shop: activeShop })}>←</button>
         <span style={{ fontWeight: 600, fontSize: 16 }}>Escolher Horário</span>
       </div>
 
@@ -77,12 +82,11 @@ export default function BookingPage({ shop, service, navigate }) {
         {/* Service summary */}
         <div style={{ background: 'var(--dark3)', borderRadius: 12, padding: '14px', marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>{service?.name}</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{shop?.name} · {service?.duration_minutes} min</div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>{activeService?.name}</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>{activeShop?.name} · {activeService?.duration_minutes} min</div>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gold)' }}>R$ {service?.price}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--gold)' }}>R$ {activeService?.price}</div>
         </div>
-
         {/* Date picker */}
         <div className="section-title" style={{ marginBottom: 12 }}>Selecione a data</div>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4, marginBottom: 24 }}>
@@ -139,7 +143,7 @@ export default function BookingPage({ shop, service, navigate }) {
         )}
 
         <button className="btn-primary"
-          disabled={!selectedDate || !selectedTime || confirming}
+          disabled={!selectedDate || !selectedTime || confirming || !activeShop || !activeService}
           onClick={handleConfirm}>
           {confirming ? 'CONFIRMANDO...' : !user ? 'ENTRAR PARA AGENDAR' : 'CONFIRMAR AGENDAMENTO'}
         </button>

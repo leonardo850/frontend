@@ -4,7 +4,7 @@ import { authAPI } from '../lib/api';
 import { validateEmail, validatePassword, passwordStrength } from '../utils/authValidation';
 
 export default function LoginPage({ navigate }) {
-  const { user, login, register, logout } = useAuth();
+  const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [loading, setLoading] = useState(false);
@@ -21,10 +21,10 @@ export default function LoginPage({ navigate }) {
     setError(''); setLoading(true);
     try {
       if (tab === 'login') {
-        await login(form.email.trim(), form.password);
-        const isCompany = localStorage.getItem('lebux_is_company') === 'true';
+        const result = await login(form.email.trim(), form.password);
+        const nextIsCompany = result?.user?.isCompany ?? isCompany;
         showToast('✅ Bem-vindo!');
-        setTimeout(() => navigate(isCompany ? 'company' : 'home'), 1000);
+        setTimeout(() => navigate(nextIsCompany ? 'company' : 'home'), 1000);
       } else {
         if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
@@ -47,7 +47,6 @@ export default function LoginPage({ navigate }) {
   const [pwdError, setPwdError] = useState('');
 
   if (user) {
-    const isCompany = localStorage.getItem('lebux_is_company') === 'true';
     if (isCompany) {
       return (
         <div className="page" style={{ padding: '20px' }}>

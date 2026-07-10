@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -18,29 +18,28 @@ function RequireAuth({ children }) {
 }
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, isCompany } = useAuth();
   const navigateRouter = useNavigate();
   const location = useLocation();
-  const [selectedShop, setSelectedShop] = useState(null);
-  const [selectedService, setSelectedService] = useState(null);
   const [resetToken, setResetToken] = useState('');
 
-  // generic navigate helper for existing components expecting `navigate(screen, data)`
   const navigate = (to, data = {}) => {
-    if (data.shop) setSelectedShop(data.shop);
-    if (data.service) setSelectedService(data.service);
-    if (data.token) setResetToken(data.token);
+    const state = {
+      shop: data.shop,
+      service: data.service,
+      token: data.token,
+    };
 
     switch (to) {
-      case 'home': return navigateRouter('/');
-      case 'barbershop': return navigateRouter('/barbershop');
-      case 'booking': return navigateRouter('/booking');
-      case 'appointments': return navigateRouter('/appointments');
-      case 'company': return navigateRouter('/company');
-      case 'login': return navigateRouter('/login');
-      case 'forgot-password': return navigateRouter('/forgot-password');
-      case 'reset-password': return navigateRouter('/reset-password');
-      default: return navigateRouter('/');
+      case 'home': return navigateRouter('/', { state });
+      case 'barbershop': return navigateRouter('/barbershop', { state });
+      case 'booking': return navigateRouter('/booking', { state });
+      case 'appointments': return navigateRouter('/appointments', { state });
+      case 'company': return navigateRouter('/company', { state });
+      case 'login': return navigateRouter('/login', { state });
+      case 'forgot-password': return navigateRouter('/forgot-password', { state });
+      case 'reset-password': return navigateRouter('/reset-password', { state });
+      default: return navigateRouter('/', { state });
     }
   };
 
@@ -57,8 +56,8 @@ export default function App() {
     <div className="app-shell">
       <Routes>
         <Route path="/" element={<RequireAuth><HomePage navigate={navigate} /></RequireAuth>} />
-        <Route path="/barbershop" element={<RequireAuth><BarbershopPage shop={selectedShop} navigate={navigate} /></RequireAuth>} />
-        <Route path="/booking" element={<RequireAuth><BookingPage shop={selectedShop} service={selectedService} navigate={navigate} /></RequireAuth>} />
+        <Route path="/barbershop" element={<RequireAuth><BarbershopPage navigate={navigate} /></RequireAuth>} />
+        <Route path="/booking" element={<RequireAuth><BookingPage navigate={navigate} /></RequireAuth>} />
         <Route path="/appointments" element={<RequireAuth><AppointmentsPage navigate={navigate} /></RequireAuth>} />
         <Route path="/login" element={<LoginPage navigate={navigate} />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage navigate={navigate} />} />
@@ -67,7 +66,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* bottom nav: show different items depending on authentication; hide on auth pages */}
       {(() => {
         const hideOn = ['/login', '/forgot-password', '/reset-password'];
         const hideNav = hideOn.includes(location.pathname);
@@ -76,7 +74,7 @@ export default function App() {
           <nav className="bottom-nav">
             {user ? (
               <>
-                {localStorage.getItem('lebux_is_company') === 'true' ? (
+                {isCompany ? (
                   <button className={`nav-btn`} onClick={() => navigate('company')}>
                     <span className="nav-icon">💼</span>
                     <span className="nav-label">Empresa</span>

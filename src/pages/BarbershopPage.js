@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react';
 import { barbershopsAPI } from '../lib/api';
 
 export default function BarbershopPage({ shop, navigate }) {
-  const [fullShop, setFullShop] = useState(shop);
-  const [selectedService, setSelectedService] = useState(null);
+  const location = useLocation();
+  const locationState = location.state || {};
+  const [fullShop, setFullShop] = useState(shop || locationState.shop);
+  const [selectedService, setSelectedService] = useState(locationState.service || null);
 
   useEffect(() => {
-    if (shop?.id) {
-      barbershopsAPI.getById(shop.id)
-        .then(({ data }) => setFullShop(data))
-        .catch(() => {});
+    if (!fullShop?.id) {
+      navigate('home');
+      return;
     }
-  }, [shop?.id]);
+
+    barbershopsAPI.getById(fullShop.id)
+      .then(({ data }) => setFullShop(data))
+      .catch(() => {});
+  }, [fullShop?.id, navigate]);
 
   const services = fullShop?.services || [
     { id: 's1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte', icon: '✂️' },

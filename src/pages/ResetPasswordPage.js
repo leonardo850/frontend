@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { authAPI } from '../lib/api';
 import { validatePassword } from '../utils/authValidation';
 
 export default function ResetPasswordPage({ navigate, token }) {
-  const [resetToken, setResetToken] = useState(token || '');
+  const location = useLocation();
+  const [resetToken, setResetToken] = useState(token || location.state?.token || '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -11,8 +13,9 @@ export default function ResetPasswordPage({ navigate, token }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (token) setResetToken(token);
-  }, [token]);
+    const incomingToken = token || location.state?.token;
+    if (incomingToken) setResetToken(incomingToken);
+  }, [token, location.state?.token]);
 
   const handleSubmit = async () => {
     setError('');

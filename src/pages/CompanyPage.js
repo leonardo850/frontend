@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 
 export default function CompanyPage({ navigate }) {
-  const { user, logout } = useAuth();
+  const { user, isCompany, logout } = useAuth();
   const [tab, setTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -204,7 +204,6 @@ export default function CompanyPage({ navigate }) {
     setSubmitting(false);
   };
 
-  const isCompany = localStorage.getItem('lebux_is_company') === 'true';
   if (!user || !isCompany) {
     return (
       <div className="page" style={{ padding: 40, textAlign: 'center' }}>
