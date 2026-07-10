@@ -253,10 +253,13 @@ export default function CompanyPage({ navigate }) {
                 {[
                   { label: 'Barbearias', value: data.total_barbershops, icon: '💈' },
                   { label: 'Clientes', value: data.total_clients, icon: '👥' },
-                  { label: 'Agendamentos', value: data.total_appointments, icon: '📅' },
+                  { label: 'Agendamentos', value: data.total_appointments, icon: '📅', link: 'appointments' },
                   { label: 'Faturamento', value: `R$ ${data.total_revenue}`, icon: '💰' },
-                ].map((item, i) => (
-                  <div key={i} style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', textAlign: 'center' }}>
+                ].map((item, i) => {
+                  const CardTag = item.link ? 'button' : 'div';
+                  return (
+                  <CardTag key={i} onClick={item.link ? () => setTab(item.link) : undefined}
+                    style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', textAlign: 'center', cursor: item.link ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif', width: '100%' }}>
                     <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--gold)' }}>{item.value}</div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{item.label}</div>
@@ -293,9 +296,10 @@ export default function CompanyPage({ navigate }) {
                   <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 13, color: 'var(--gold)' }}>
                     <span>{c.total_appointments} agendamentos</span>
                   </div>
-                </div>
-              ))}
-            </div>
+                  </CardTag>
+                  );
+                })}
+              </div>
           )}
         </div>
       )}
