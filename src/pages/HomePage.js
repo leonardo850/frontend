@@ -301,7 +301,12 @@ export default function HomePage({ navigate }) {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  {suggestion.display_name}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{suggestion.label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                      {suggestion.source === 'google' ? 'Google' : 'OSM'}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
