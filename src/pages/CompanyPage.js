@@ -263,8 +263,9 @@ export default function CompanyPage({ navigate }) {
                     <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--gold)' }}>{item.value}</div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>{item.label}</div>
-                  </div>
-                ))}
+                  </CardTag>
+                  );
+                })}
               </div>
               <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px' }}>
                 <div style={{ fontSize: 14, color: 'var(--muted)' }}>Agendamentos hoje</div>
@@ -552,8 +553,9 @@ export default function CompanyPage({ navigate }) {
                         style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
                     </div>
                   )}
-                </div>
-              ))}
+                  </CardTag>
+                  );
+                })}
               <button className="btn-primary" disabled={savingHours} onClick={handleSaveHours}
                 style={{ padding: '12px', fontSize: 14, marginTop: 4 }}>
                 {savingHours ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
