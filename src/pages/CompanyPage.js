@@ -296,9 +296,8 @@ export default function CompanyPage({ navigate }) {
                   <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 13, color: 'var(--gold)' }}>
                     <span>{c.total_appointments} agendamentos</span>
                   </div>
-                  </CardTag>
-                  );
-                })}
+                </div>
+              ))}
               </div>
           )}
         </div>
@@ -552,9 +551,8 @@ export default function CompanyPage({ navigate }) {
                         style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
                     </div>
                   )}
-                  </CardTag>
-                  );
-                })}
+                </div>
+              ))}
               <button className="btn-primary" disabled={savingHours} onClick={handleSaveHours}
                 style={{ padding: '12px', fontSize: 14, marginTop: 4 }}>
                 {savingHours ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
