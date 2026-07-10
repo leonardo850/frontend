@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
+import CompanyHoursEditor from '../components/CompanyHoursEditor';
 
 export default function CompanyPage({ navigate }) {
   const { user, isCompany, logout } = useAuth();
@@ -73,9 +74,26 @@ export default function CompanyPage({ navigate }) {
   // Estado para horários de funcionamento
   const [hours, setHours] = useState([]);
   const [hoursShopId, setHoursShopId] = useState('');
+  const [hoursLoading, setHoursLoading] = useState(false);
+  const [hoursError, setHoursError] = useState('');
   const [savingHours, setSavingHours] = useState(false);
 
   const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const getDefaultHours = () => DAY_NAMES.map((_, index) => ({
+    day_of_week: index,
+    is_open: index < 5,
+    open_time: '09:00',
+    close_time: '18:00',
+  }));
+
+  const handleToggleDayOpen = (index, isOpen) => {
+    setHours(prev => prev.map((h, i) => i === index ? { ...h, is_open: isOpen } : h));
+  };
+
+  const handleHoursChange = (index, field, value) => {
+    setHours(prev => prev.map((h, i) => i === index ? { ...h, [field]: value } : h));
+  };
 
   const handleSlotClick = (date, time) => {
     setSelectedAppt(null);
@@ -113,10 +131,16 @@ export default function CompanyPage({ navigate }) {
 
   const fetchHours = useCallback(async (shopId) => {
     if (!shopId) { setHours([]); return; }
+    setHoursLoading(true);
+    setHoursError('');
     try {
       const { data: res } = await api.get(`/api/company/hours/${shopId}`);
-      if (res?.hours?.length) setHours(res.hours);
-    } catch { setHours([]); }
+      setHours(res?.hours?.length ? res.hours : getDefaultHours());
+    } catch (err) {
+      setHours(getDefaultHours());
+      setHoursError('Não foi possível carregar horários. Ajuste os horários e tente novamente.');
+    }
+    setHoursLoading(false);
   }, []);
 
   const handleSaveHours = async () => {
@@ -509,57 +533,19 @@ export default function CompanyPage({ navigate }) {
 
       {/* Horários de funcionamento */}
       {tab === 'hours' && (
-        <div style={{ padding: '0 20px' }}>
-          <select style={{ width: '100%', padding: '12px 14px', fontSize: 14, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', marginBottom: 16 }}
-            value={hoursShopId} onChange={e => { setHoursShopId(e.target.value); fetchHours(e.target.value); }}>
-            <option value="">Selecione uma barbearia</option>
-            {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-
-          {hoursShopId && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {hours.map((h, i) => (
-                <div key={h.day_of_week} style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{DAY_NAMES[h.day_of_week]}</div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={h.is_open !== false}
-                        onChange={e => {
-                          const updated = [...hours];
-                          updated[i] = { ...updated[i], is_open: e.target.checked };
-                          setHours(updated);
-                        }} />
-                      Aberto
-                    </label>
-                  </div>
-                  {h.is_open !== false && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input type="time" value={h.open_time || '09:00'}
-                        onChange={e => {
-                          const updated = [...hours];
-                          updated[i] = { ...updated[i], open_time: e.target.value };
-                          setHours(updated);
-                        }}
-                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
-                      <span style={{ color: 'var(--muted)', fontSize: 13 }}>até</span>
-                      <input type="time" value={h.close_time || '19:00'}
-                        onChange={e => {
-                          const updated = [...hours];
-                          updated[i] = { ...updated[i], close_time: e.target.value };
-                          setHours(updated);
-                        }}
-                        style={{ flex: 1, padding: '8px 10px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }} />
-                    </div>
-                  )}
-                </div>
-              ))}
-              <button className="btn-primary" disabled={savingHours} onClick={handleSaveHours}
-                style={{ padding: '12px', fontSize: 14, marginTop: 4 }}>
-                {savingHours ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
-              </button>
-            </div>
-          )}
-        </div>
+        <CompanyHoursEditor
+          shops={shops}
+          hoursShopId={hoursShopId}
+          onShopChange={shopId => { setHoursShopId(shopId); fetchHours(shopId); }}
+          hours={hours}
+          hoursLoading={hoursLoading}
+          hoursError={hoursError}
+          savingHours={savingHours}
+          onToggleDayOpen={handleToggleDayOpen}
+          onHoursChange={handleHoursChange}
+          onSaveHours={handleSaveHours}
+          dayNames={DAY_NAMES}
+        />
       )}
     </div>
   );
