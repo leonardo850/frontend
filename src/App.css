@@ -127,6 +127,47 @@ html, body {
 .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
 
 /* Floating action button for Shop Day view */
+
+.theme-toggle-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  min-width: 120px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--dark2);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 14px;
+  cursor: pointer;
+  z-index: 300;
+  font-size: 13px;
+  font-weight: 700;
+}
+.theme-toggle-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.theme-light {
+  --gold: #F2B50E;
+  --gold-light: #F8D66F;
+  --dark: #F5F5F5;
+  --dark2: #FFFFFF;
+  --dark3: #F0F0F0;
+  --surface: #FFFFFF;
+  --border: #D1D1D1;
+  --text: #121212;
+  --muted: #666666;
+  --muted2: #999999;
+  --green: #27AE60;
+  --red: #E74C3C;
+}
+
 .shop-day-fab {
   position: fixed;
   right: 18px;
@@ -158,13 +199,13 @@ html, body {
   background: var(--dark3);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 16px 18px;
+  padding: 18px 20px;
   font-size: clamp(15px, 1.6vw, 16px);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   outline: none;
   transition: border-color 0.2s;
-  min-height: 52px;
+  min-height: 64px;
 }
 .input-field:focus { border-color: var(--gold-light); box-shadow: 0 0 0 3px rgba(107, 168, 247, 0.16); }
 .input-field::placeholder { color: var(--muted2); }

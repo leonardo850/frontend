@@ -30,6 +30,7 @@ export default function App() {
   const navigateRouter = useNavigate();
   const location = useLocation();
   const [resetToken, setResetToken] = useState('');
+  const [theme, setTheme] = useState(() => localStorage.getItem('lebux_theme') || 'dark');
 
   const navigate = (to, data = {}) => {
     const state = {
@@ -62,8 +63,23 @@ export default function App() {
     }
   }, [navigateRouter]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('theme-light', theme === 'light');
+    localStorage.setItem('lebux_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  };
+
   return (
     <div className="app-shell">
+      <button className="theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700 }}>{theme === 'dark' ? 'Claro' : 'Escuro'}</span>
+        </span>
+      </button>
       <Routes>
         <Route path="/" element={<RequireAuth><HomePage navigate={navigate} /></RequireAuth>} />
         <Route path="/barbershop" element={<RequireAuth><BarbershopPage navigate={navigate} /></RequireAuth>} />

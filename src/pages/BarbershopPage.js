@@ -15,15 +15,6 @@ export default function BarbershopPage({ shop, navigate }) {
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const [fabHidden, setFabHidden] = useState(() => {
-    try { return localStorage.getItem('shopday_fab_hidden') === '1'; } catch { return false; }
-  });
-
-  const toggleFab = () => {
-    const next = !fabHidden;
-    setFabHidden(next);
-    try { localStorage.setItem('shopday_fab_hidden', next ? '1' : '0'); } catch {}
-  };
 
   const handleToggleShopFavorite = () => {
     if (!fullShop?.id) return;
@@ -76,12 +67,6 @@ export default function BarbershopPage({ shop, navigate }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="btn-secondary" onClick={() => navigate('shop-day', { shopId: fullShop?.id, date: todayStr })}>
             Ver agenda do dia
-          </button>
-          <button className="btn-outline" onClick={handleToggleShopFavorite} title={shopFavorited ? 'Desfavoritar barbearia' : 'Favoritar barbearia'}>
-            {shopFavorited ? '❤️' : '🤍'}
-          </button>
-          <button className="btn-outline" onClick={toggleFab} title={fabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}>
-            {fabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}
           </button>
         </div>
       </div>
@@ -152,11 +137,6 @@ export default function BarbershopPage({ shop, navigate }) {
         </button>
       </div>
 
-      {!fabHidden && (
-        <button className="shop-day-fab" title="Ver agenda do dia" onClick={() => navigate('shop-day', { shopId: fullShop?.id, date: todayStr })}>
-          📅
-        </button>
-      )}
     </div>
   );
 }
