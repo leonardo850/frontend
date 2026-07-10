@@ -27,6 +27,8 @@ export default function CompanyAppointmentsEditor({
   setSlotFilter,
   clientFilter,
   setClientFilter,
+  filterShopId,
+  handleFilterShopChange,
 }) {
   const DAY_NAMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
@@ -35,7 +37,7 @@ export default function CompanyAppointmentsEditor({
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <select style={{ flex: 1, minWidth: 120, padding: '10px 12px', fontSize: 13, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }}
-          value={newAppt.barbershop_id} onChange={e => { setNewAppt(prev => ({ ...prev, barbershop_id: e.target.value, service_id: '' })); handleShopChange(e.target.value); }}>
+          value={filterShopId} onChange={e => handleFilterShopChange(e.target.value)}>
           <option value="">Todas barbearias</option>
           {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>

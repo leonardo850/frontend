@@ -24,6 +24,7 @@ export default function CompanyPage({ navigate }) {
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [slotFilter, setSlotFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('');
+  const [filterShopId, setFilterShopId] = useState('');
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -111,8 +112,22 @@ export default function CompanyPage({ navigate }) {
   const handleSlotClick = (date, time) => {
     setSelectedAppt(null);
     setShowCreateForm(true);
-    setNewAppt(prev => ({ ...prev, date, start_time: time, barbershop_id: '', service_id: '', user_id: '', client_search: '', notes: '' }));
+    setNewAppt(prev => ({
+      ...prev,
+      date,
+      start_time: time,
+      barbershop_id: filterShopId || '',
+      service_id: '',
+      user_id: '',
+      client_search: '',
+      notes: '',
+    }));
     setServices([]);
+  };
+
+  const handleFilterShopChange = (shopId) => {
+    setFilterShopId(shopId);
+    fetchApptHours(shopId);
   };
 
   const fetchReports = useCallback(async () => {
@@ -186,9 +201,9 @@ export default function CompanyPage({ navigate }) {
   useEffect(() => {
     if (tab === 'dashboard') fetchReports();
     else if (tab === 'clients') fetchClients();
-    else if (tab === 'appointments') { fetchAppointments(); fetchShops(); fetchApptHours(newAppt.barbershop_id); }
+    else if (tab === 'appointments') { fetchAppointments(); fetchShops(); fetchApptHours(filterShopId); }
     else if (tab === 'hours') { fetchShops(); fetchHours(hoursShopId); }
-  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops, fetchHours, hoursShopId, fetchApptHours]);
+  }, [tab, fetchReports, fetchClients, fetchAppointments, fetchShops, fetchHours, hoursShopId, fetchApptHours, filterShopId]);
 
   const handleSearchClient = async () => {
     if (!newAppt.client_search) return;
@@ -378,6 +393,8 @@ export default function CompanyPage({ navigate }) {
             setSlotFilter={setSlotFilter}
             clientFilter={clientFilter}
             setClientFilter={setClientFilter}
+            filterShopId={filterShopId}
+            handleFilterShopChange={handleFilterShopChange}
           />
 
           {/* Novo agendamento (aparece ao clicar em slot livre) */}
@@ -404,14 +421,14 @@ export default function CompanyPage({ navigate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>Agendamentos do dia</div>
                 <div>
-                  <button className="btn-secondary" onClick={() => navigate('shop-day', { shopId: newAppt.barbershop_id || hoursShopId || (shops[0] && shops[0].id), date: selectedDate })}>
+                  <button className="btn-secondary" onClick={() => navigate('shop-day', { shopId: filterShopId || hoursShopId || (shops[0] && shops[0].id), date: selectedDate })}>
                     Ver agenda da barbearia
                   </button>
                 </div>
               </div>
-                  <AppointmentsList
+              <AppointmentsList
                 appointments={(dayAppointments[selectedDate] || [])
-                  .filter(a => !newAppt.barbershop_id || a.barbershop_id === newAppt.barbershop_id)
+                  .filter(a => !filterShopId || String(a.barbershop_id || a.barbershop?.id) === String(filterShopId))
                   .filter(a => !clientFilter || a.users?.name?.toLowerCase().includes(clientFilter.toLowerCase()))}
                 onSelect={a => setSelectedAppt(a)}
               />
