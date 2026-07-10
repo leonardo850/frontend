@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { getFavoriteIds, toggleFavorite } from '../lib/favorites';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -6,6 +8,8 @@ import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
 export default function HomePage({ navigate }) {
   const [shops, setShops] = useState([]);
+  const { user } = useAuth();
+  const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
@@ -14,9 +18,8 @@ export default function HomePage({ navigate }) {
   const [toast, setToast] = useState('');
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
-  const googleMapsKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
   const isMountedRef = useRef(true);
-  const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions(googleMapsKey);
+  const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions();
   const { location: deviceLocation, loading: deviceLocationLoading } = useGeolocation();
   const hasLocation = Boolean(manualLocation || deviceLocation);
 
@@ -25,38 +28,22 @@ export default function HomePage({ navigate }) {
     setTimeout(() => setToast(''), 2600);
   };
 
-
-  const googleGeocodeAddress = async (address) => {
-    if (!googleMapsKey) return null;
-    try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsKey}`);
-      if (!res.ok) return null;
-      const json = await res.json();
-      if (json.status !== 'OK' || !json.results?.length) return null;
-      const location = json.results[0].geometry.location;
-      return { lat: location.lat, lng: location.lng };
-    } catch {
-      return null;
+  const getGoogleMapsSearchUrl = () => {
+    const query = manualLocation || locationText;
+    if (query) {
+      return `https://www.google.com/maps/search/barbearia+em+${encodeURIComponent(query)}`;
     }
+    if (deviceLocation) {
+      return `https://www.google.com/maps/search/barbearia/@${deviceLocation.lat},${deviceLocation.lng},13z`;
+    }
+    return 'https://www.google.com/maps/search/barbearia';
   };
 
-  const googleReverseGeocode = async ({ lat, lng }) => {
-    if (!googleMapsKey) return null;
-    try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsKey}`);
-      if (!res.ok) return null;
-      const json = await res.json();
-      if (json.status !== 'OK' || !json.results?.length) return null;
-      return json.results[0].formatted_address || null;
-    } catch {
-      return null;
-    }
+  const openGoogleMapsSearch = () => {
+    window.open(getGoogleMapsSearchUrl(), '_blank', 'noopener');
   };
 
   const geocodeAddress = async (address) => {
-    const googleResult = await googleGeocodeAddress(address);
-    if (googleResult) return googleResult;
-
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`);
       if (!res.ok) return null;
@@ -69,9 +56,6 @@ export default function HomePage({ navigate }) {
   };
 
   const reverseGeocode = async ({ lat, lng }) => {
-    const googleResult = await googleReverseGeocode({ lat, lng });
-    if (googleResult) return googleResult;
-
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
       if (!res.ok) return null;
@@ -211,6 +195,16 @@ export default function HomePage({ navigate }) {
     };
   }, []);
 
+  useEffect(() => {
+    setFavShops(getFavoriteIds('shop', user?.id));
+  }, [user]);
+
+  const handleToggleShopFavorite = (shop) => {
+    const next = toggleFavorite('shop', user?.id, shop.id);
+    setFavShops(next);
+    showToast(next.includes(shop.id) ? 'Barbearia favoritada' : 'Barbearia removida dos favoritos');
+  };
+
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
     { id: 'corte', label: 'Corte', icon: '💈' },
@@ -252,6 +246,7 @@ export default function HomePage({ navigate }) {
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
           />
+
           {showSuggestions && suggestions.length > 0 && (
             <div style={{
               position: 'absolute',
@@ -276,22 +271,7 @@ export default function HomePage({ navigate }) {
                     setShowSuggestions(false);
                     setLoading(true);
                     try {
-                      let coords = null;
-                      if (suggestion.source === 'google') {
-                        const detailsRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&fields=formatted_address,geometry&key=${googleMapsKey}`);
-                        if (detailsRes.ok) {
-                          const detailsJson = await detailsRes.json();
-                          if (detailsJson.status === 'OK' && detailsJson.result?.geometry?.location) {
-                            coords = {
-                              lat: detailsJson.result.geometry.location.lat,
-                              lng: detailsJson.result.geometry.location.lng,
-                            };
-                          }
-                        }
-                      }
-                      if (!coords) {
-                        coords = await geocodeAddress(suggestion.label);
-                      }
+                      const coords = await geocodeAddress(suggestion.label);
                       setLocationCoords(coords);
                       const params = buildParams(search, suggestion.label, coords);
                       const { data } = await barbershopsAPI.getAll(params);
@@ -301,13 +281,9 @@ export default function HomePage({ navigate }) {
                       }
                     } catch {
                       console.error('Erro ao buscar barbearias para sugestão');
-                      if (isMountedRef.current) {
-                        setShops(getDemoShops(suggestion.label));
-                      }
+                      if (isMountedRef.current) setShops(getDemoShops(suggestion.label));
                     }
-                    if (isMountedRef.current) {
-                      setLoading(false);
-                    }
+                    if (isMountedRef.current) setLoading(false);
                   }}
                   style={{
                     display: 'block',
@@ -330,6 +306,7 @@ export default function HomePage({ navigate }) {
               ))}
             </div>
           )}
+
           <button
             className="btn-primary"
             style={{ width: '100%', marginTop: 12, padding: '16px 18px', fontSize: 16, minHeight: 52 }}
@@ -359,6 +336,13 @@ export default function HomePage({ navigate }) {
           onClick={fetchShops}
         >
           Buscar
+        </button>
+        <button
+          className="btn-secondary"
+          style={{ flexShrink: 0, minWidth: 160, padding: '14px 18px', fontSize: 16, minHeight: 52 }}
+          onClick={openGoogleMapsSearch}
+        >
+          Ver no Google Maps
         </button>
       </div>
 
@@ -407,7 +391,13 @@ export default function HomePage({ navigate }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 20px' }}>
             {shops.map(shop => (
-              <ShopCard key={shop.id} shop={shop} onClick={() => navigate('barbershop', { shop })} />
+              <ShopCard
+                key={shop.id}
+                shop={shop}
+                onClick={() => navigate('barbershop', { shop })}
+                favorited={favShops.includes(shop.id)}
+                onToggleFavorite={() => handleToggleShopFavorite(shop)}
+              />
             ))}
           </div>
         )}

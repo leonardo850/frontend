@@ -9,11 +9,19 @@ import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CompanyPage from './pages/CompanyPage';
+import ShopDayView from './pages/ShopDayView';
 import './App.css';
 
 function RequireAuth({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function RequireCompany({ children }) {
+  const { user, isCompany } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isCompany) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -26,6 +34,7 @@ export default function App() {
   const navigate = (to, data = {}) => {
     const state = {
       shop: data.shop,
+      shopId: data.shopId,
       service: data.service,
       token: data.token,
     };
@@ -36,6 +45,7 @@ export default function App() {
       case 'booking': return navigateRouter('/booking', { state });
       case 'appointments': return navigateRouter('/appointments', { state });
       case 'company': return navigateRouter('/company', { state });
+      case 'shop-day': return navigateRouter(`/shop-day/${data.shopId || ''}`, { state });
       case 'login': return navigateRouter('/login', { state });
       case 'forgot-password': return navigateRouter('/forgot-password', { state });
       case 'reset-password': return navigateRouter('/reset-password', { state });
@@ -62,7 +72,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage navigate={navigate} />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage navigate={navigate} />} />
         <Route path="/reset-password" element={<ResetPasswordPage navigate={navigate} token={resetToken} />} />
-        <Route path="/company" element={<RequireAuth><CompanyPage navigate={navigate} /></RequireAuth>} />
+        <Route path="/company" element={<RequireCompany><CompanyPage navigate={navigate} /></RequireCompany>} />
+        <Route path="/shop-day/:shopId?" element={<RequireCompany><ShopDayView navigate={navigate} /></RequireCompany>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

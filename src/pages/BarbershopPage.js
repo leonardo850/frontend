@@ -1,11 +1,46 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { getFavoriteIds, toggleFavorite } from '../lib/favorites';
 import { barbershopsAPI } from '../lib/api';
 
 export default function BarbershopPage({ shop, navigate }) {
+  const { user } = useAuth();
   const location = useLocation();
   const locationState = location.state || {};
   const [fullShop, setFullShop] = useState(shop || locationState.shop);
   const [selectedService, setSelectedService] = useState(locationState.service || null);
+  const [shopFavorited, setShopFavorited] = useState(() => getFavoriteIds('shop', user?.id).includes((shop || locationState.shop)?.id));
+  const [favServices, setFavServices] = useState(() => getFavoriteIds('service', user?.id));
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const [fabHidden, setFabHidden] = useState(() => {
+    try { return localStorage.getItem('shopday_fab_hidden') === '1'; } catch { return false; }
+  });
+
+  const toggleFab = () => {
+    const next = !fabHidden;
+    setFabHidden(next);
+    try { localStorage.setItem('shopday_fab_hidden', next ? '1' : '0'); } catch {}
+  };
+
+  const handleToggleShopFavorite = () => {
+    if (!fullShop?.id) return;
+    const nextIds = toggleFavorite('shop', user?.id, fullShop.id);
+    setShopFavorited(nextIds.includes(fullShop.id));
+  };
+
+  const handleToggleServiceFavorite = (svc) => {
+    if (!svc?.id) return;
+    const nextIds = toggleFavorite('service', user?.id, svc.id);
+    setFavServices(nextIds);
+  };
+
+  useEffect(() => {
+    setShopFavorited(getFavoriteIds('shop', user?.id).includes(fullShop?.id));
+    setFavServices(getFavoriteIds('service', user?.id));
+  }, [user, fullShop?.id]);
 
   useEffect(() => {
     if (!fullShop?.id) {
@@ -33,9 +68,22 @@ export default function BarbershopPage({ shop, navigate }) {
   return (
     <div className="page">
       {/* Header */}
-      <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 14, borderBottom: '1px solid var(--border)' }}>
-        <button className="back-btn" onClick={() => navigate('home')}>←</button>
-        <span style={{ fontWeight: 600, fontSize: 16 }}>{fullShop?.name}</span>
+      <div style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button className="back-btn" onClick={() => navigate('home')}>←</button>
+          <span style={{ fontWeight: 600, fontSize: 16 }}>{fullShop?.name}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-secondary" onClick={() => navigate('shop-day', { shopId: fullShop?.id, date: todayStr })}>
+            Ver agenda do dia
+          </button>
+          <button className="btn-outline" onClick={handleToggleShopFavorite} title={shopFavorited ? 'Desfavoritar barbearia' : 'Favoritar barbearia'}>
+            {shopFavorited ? '❤️' : '🤍'}
+          </button>
+          <button className="btn-outline" onClick={toggleFab} title={fabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}>
+            {fabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}
+          </button>
+        </div>
       </div>
 
       {/* Hero */}
@@ -69,20 +117,32 @@ export default function BarbershopPage({ shop, navigate }) {
         {/* Services */}
         <div className="section-title" style={{ marginBottom: 14 }}>Escolha o serviço</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-          {services.map(svc => (
-            <div key={svc.id}
-              onClick={() => setSelectedService(svc)}
-              style={{
-                background: 'var(--dark3)', borderRadius: 12, padding: '14px', cursor: 'pointer',
-                border: `1px solid ${selectedService?.id === svc.id ? 'var(--gold)' : 'transparent'}`,
-                transition: 'border-color 0.2s'
-              }}>
-              <div style={{ fontSize: 22, marginBottom: 6 }}>{svc.icon || svcIcons[svc.category] || '✂️'}</div>
-              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{svc.name}</div>
-              <div style={{ fontSize: 13, color: selectedService?.id === svc.id ? 'var(--gold)' : 'var(--muted)' }}>R$ {svc.price}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{svc.duration_minutes} min</div>
-            </div>
-          ))}
+          {services.map(svc => {
+            const favorited = favServices.includes(svc.id);
+            return (
+              <div key={svc.id}
+                style={{
+                  position: 'relative',
+                  background: 'var(--dark3)', borderRadius: 12, padding: '14px', cursor: 'pointer',
+                  border: `1px solid ${selectedService?.id === svc.id ? 'var(--gold)' : 'transparent'}`,
+                  transition: 'border-color 0.2s'
+                }}>
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleToggleServiceFavorite(svc); }}
+                  style={{
+                    position: 'absolute', right: 12, top: 12, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18
+                  }}
+                  title={favorited ? 'Desfavoritar serviço' : 'Favoritar serviço'}>
+                  {favorited ? '❤️' : '🤍'}
+                </button>
+                <div onClick={() => setSelectedService(svc)}>
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>{svc.icon || svcIcons[svc.category] || '✂️'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{svc.name}</div>
+                  <div style={{ fontSize: 13, color: selectedService?.id === svc.id ? 'var(--gold)' : 'var(--muted)' }}>R$ {svc.price}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{svc.duration_minutes} min</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <button className="btn-primary"
@@ -91,6 +151,12 @@ export default function BarbershopPage({ shop, navigate }) {
           {selectedService ? `AGENDAR — R$ ${selectedService.price}` : 'SELECIONE UM SERVIÇO'}
         </button>
       </div>
+
+      {!fabHidden && (
+        <button className="shop-day-fab" title="Ver agenda do dia" onClick={() => navigate('shop-day', { shopId: fullShop?.id, date: todayStr })}>
+          📅
+        </button>
+      )}
     </div>
   );
 }

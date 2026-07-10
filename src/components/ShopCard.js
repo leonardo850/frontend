@@ -1,4 +1,4 @@
-export default function ShopCard({ shop, onClick }) {
+export default function ShopCard({ shop, onClick, favorited = false, onToggleFavorite }) {
   const initials = shop.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const colors = ['#4A90E2', '#2F80ED', '#56CCF2', '#9B59B6', '#27AE60'];
   const color = colors[shop.name.charCodeAt(0) % colors.length];
@@ -6,10 +6,16 @@ export default function ShopCard({ shop, onClick }) {
 
   return (
     <div className="card" onClick={onClick}
-      style={{ padding: '14px', display: 'flex', gap: 14, cursor: 'pointer', transition: 'border-color 0.2s' }}
+      style={{ position: 'relative', padding: '14px', display: 'flex', gap: 14, cursor: 'pointer', transition: 'border-color 0.2s' }}
       onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
+      {typeof onToggleFavorite === 'function' && (
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(shop); }}
+          style={{ position: 'absolute', right: 18, top: 18, zIndex: 50, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18 }}>
+          {favorited ? '❤️' : '🤍'}
+        </button>
+      )}
       <div style={{ width: 68, height: 68, borderRadius: 12, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#0F0F0F', flexShrink: 0 }}>
         {initials}
       </div>

@@ -116,6 +116,36 @@ html, body {
 }
 .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
 
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Floating action button for Shop Day view */
+.shop-day-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 86px; /* above bottom-nav */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  cursor: pointer;
+  z-index: 200;
+}
+.shop-day-fab:hover { background: var(--gold-light); }
+
 .card {
   background: var(--dark2);
   border: 1px solid var(--border);
