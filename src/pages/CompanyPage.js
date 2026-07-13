@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import CompanyHoursEditor from '../components/CompanyHoursEditor';
+import CompanyAppointmentsEditor from '../components/CompanyAppointmentsEditor';
 import AppointmentsList from '../components/AppointmentsList';
 import NewAppointmentForm from '../components/NewAppointmentForm';
 
