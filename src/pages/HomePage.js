@@ -83,15 +83,28 @@ export default function HomePage({ navigate }) {
   const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords) => {
     setLoading(true);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const params = buildParams(searchValue, manualLocationValue, coords);
       const { data } = await barbershopsAPI.getAll(params);
+      clearTimeout(timeoutId);
+      
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
       }
     } catch (err) {
-      console.error('Erro ao buscar barbearias da API:', err);
-      if (isMountedRef.current) {
-        setShops([]);
+      if (err.name === 'AbortError') {
+        console.error('Requisição timeout');
+        if (isMountedRef.current) {
+          setShops([]);
+          showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
+        }
+      } else {
+        console.error('Erro ao buscar barbearias da API:', err);
+        if (isMountedRef.current) {
+          setShops([]);
+        }
       }
     }
     if (isMountedRef.current) {
@@ -106,16 +119,30 @@ export default function HomePage({ navigate }) {
     try {
       const coords = value ? await geocodeAddress(value) : null;
       setLocationCoords(coords);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const params = buildParams(search, value, coords);
       const { data } = await barbershopsAPI.getAll(params);
+      clearTimeout(timeoutId);
+      
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
         showToast(value ? 'Local aplicado' : 'Endereço limpo');
       }
     } catch (err) {
-      console.error('Erro ao aplicar localização:', err);
-      if (isMountedRef.current) {
-        setShops([]);
+      if (err.name === 'AbortError') {
+        console.error('Requisição timeout');
+        if (isMountedRef.current) {
+          setShops([]);
+          showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
+        }
+      } else {
+        console.error('Erro ao aplicar localização:', err);
+        if (isMountedRef.current) {
+          setShops([]);
+        }
       }
     }
     if (isMountedRef.current) {
@@ -129,15 +156,28 @@ export default function HomePage({ navigate }) {
     const loadShops = async () => {
       setLoading(true);
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const params = buildParams(search, manualLocation, locationCoords, radius);
         const { data } = await barbershopsAPI.getAll(params);
+        clearTimeout(timeoutId);
+        
         if (isMountedRef.current) {
           setShops(data?.barbershops || []);
         }
       } catch (err) {
-        console.error('Erro ao carregar barbearias:', err);
-        if (isMountedRef.current) {
-          setShops([]);
+        if (err.name === 'AbortError') {
+          console.error('Requisição timeout');
+          if (isMountedRef.current) {
+            setShops([]);
+            showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
+          }
+        } else {
+          console.error('Erro ao carregar barbearias:', err);
+          if (isMountedRef.current) {
+            setShops([]);
+          }
         }
       }
       if (isMountedRef.current) {

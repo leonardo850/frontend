@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { authAPI } from '../lib/api';
 import { validateEmail, validatePassword, passwordStrength } from '../utils/authValidation';
+import SignupSteps from '../components/SignupSteps';
 
 export default function LoginPage({ navigate }) {
   const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
+  const [useNewSignup, setUseNewSignup] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,10 +43,45 @@ export default function LoginPage({ navigate }) {
     setLoading(false);
   };
 
+  const handleSignupComplete = async (signupData) => {
+    setLoading(true);
+    setError('');
+    try {
+      const registerData = {
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+        phone: signupData.phone,
+        companyType: signupData.companyType,
+      };
+
+      // Se for empresa, adicionar dados da empresa
+      if (signupData.companyType !== 'none') {
+        registerData.cnpj = signupData.cnpj.replace(/\D/g, '');
+        registerData.address = signupData.address;
+        registerData.city = signupData.city;
+        registerData.state = signupData.state;
+        registerData.zipCode = signupData.zipCode;
+        registerData.services = signupData.services;
+      }
+
+      await register(signupData.name, signupData.email, signupData.password, signupData.phone, registerData);
+      showToast('✅ Bem-vindo à Lebux!');
+      setTimeout(() => navigate(signupData.companyType !== 'none' ? 'company' : 'home'), 1000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erro ao criar conta. Tente novamente.');
+    }
+    setLoading(false);
+  };
+
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '' });
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
+
+  if (useNewSignup) {
+    return <SignupSteps onComplete={handleSignupComplete} onCancel={() => setUseNewSignup(false)} />;
+  }
 
   if (user) {
     if (isCompany) {
@@ -208,6 +245,12 @@ export default function LoginPage({ navigate }) {
         <button className="btn-primary" style={{ marginTop: 8 }} onClick={handleSubmit} disabled={loading}>
           {loading ? 'AGUARDE...' : tab === 'login' ? 'ENTRAR' : 'CRIAR CONTA'}
         </button>
+
+        {tab === 'register' && (
+          <button className="btn-secondary" style={{ marginTop: 8 }} onClick={() => setUseNewSignup(true)}>
+            Cadastro com CNPJ (Empresas)
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, color: 'var(--muted)', fontSize: 13, flexWrap: 'wrap', gap: 10 }}>
