@@ -95,6 +95,16 @@ export default function CompanyPage({ navigate }) {
 
   const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+  const DEFAULT_SERVICES = [
+    { id: 'cabelo', name: 'Cabelo', price: 40 },
+    { id: 'cabelo-barba', name: 'Cabelo e Barba', price: 60 },
+    { id: 'barba', name: 'Barba', price: 30 },
+    { id: 'corte-infantil', name: 'Corte Infantil', price: 35 },
+    { id: 'design-sobrancelha', name: 'Design de Sobrancelha', price: 25 },
+    { id: 'limpeza-rosto', name: 'Limpeza de Rosto', price: 50 },
+    { id: 'coloracao', name: 'Coloração', price: 70 },
+  ];
+
   const getDefaultHours = () => DAY_NAMES.map((_, index) => ({
     day_of_week: index,
     is_open: index < 5,
@@ -123,7 +133,7 @@ export default function CompanyPage({ navigate }) {
       client_search: '',
       notes: '',
     }));
-    setServices([]);
+    setServices(DEFAULT_SERVICES);
   };
 
   const handleFilterShopChange = (shopId) => {
@@ -223,17 +233,24 @@ export default function CompanyPage({ navigate }) {
 
   const handleShopChange = async (shopId) => {
     setNewAppt(prev => ({ ...prev, barbershop_id: shopId, service_id: '' }));
-    if (!shopId) { setServices([]); setApptHours([]); return; }
+    if (!shopId) { setServices(DEFAULT_SERVICES); setApptHours([]); return; }
     fetchApptHours(shopId);
     try {
       const { data: shopData } = await api.get(`/api/barbershops/${shopId}`);
-      setServices(shopData?.services || []);
-    } catch { setServices([]); }
+      setServices(shopData?.services?.length ? shopData.services : DEFAULT_SERVICES);
+    } catch { setServices(DEFAULT_SERVICES); }
   };
 
   const handleCreateAppointment = async () => {
-    if (!newAppt.user_id || !newAppt.barbershop_id || !newAppt.service_id || !newAppt.date || !newAppt.start_time) {
-      showToast('Preencha todos os campos');
+    const missingFields = [];
+    if (!newAppt.user_id) missingFields.push('cliente');
+    if (!newAppt.barbershop_id) missingFields.push('barbearia');
+    if (!newAppt.service_id) missingFields.push('serviço');
+    if (!newAppt.date) missingFields.push('data');
+    if (!newAppt.start_time) missingFields.push('horário');
+
+    if (missingFields.length > 0) {
+      showToast(`Preencha: ${missingFields.join(', ')}`);
       return;
     }
     setSubmitting(true);
