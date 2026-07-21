@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function NewAppointmentForm({
   selectedDate,
@@ -14,6 +14,23 @@ export default function NewAppointmentForm({
   submitting,
   onClose,
 }) {
+  const [searchTimeout, setSearchTimeout] = useState(null);
+
+  const handleClientInputChange = (value) => {
+    setNewAppt(prev => ({ ...prev, client_search: value, user_id: '' }));
+    
+    // Limpar timeout anterior
+    if (searchTimeout) clearTimeout(searchTimeout);
+    
+    // Fazer busca com delay de 300ms
+    if (value.trim()) {
+      const timeout = setTimeout(() => {
+        handleSearchClient();
+      }, 300);
+      setSearchTimeout(timeout);
+    }
+  };
+
   return (
     <div style={{ background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -25,8 +42,7 @@ export default function NewAppointmentForm({
         <div style={{ position: 'relative' }}>
           <input className="input-field" placeholder="Buscar cliente por nome ou email..."
             value={newAppt.client_search}
-            onChange={e => setNewAppt(prev => ({ ...prev, client_search: e.target.value, user_id: '' }))}
-            onKeyDown={e => e.key === 'Enter' && handleSearchClient()}
+            onChange={e => handleClientInputChange(e.target.value)}
             style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
           {clientResults.length > 0 && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: '0 0 8px 8px', zIndex: 10, maxHeight: 160, overflowY: 'auto' }}>
