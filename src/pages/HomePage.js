@@ -78,23 +78,7 @@ export default function HomePage({ navigate }) {
     return params;
   };
 
-  const getDemoShops = (location = '') => {
-    const baseShops = [
-      { id: '1', name: 'Barber King', address: 'Rua das Flores, 123', city: 'Jaú', is_open: true, rating: 4.9, total_reviews: 124, distance_km: 0.3, services: [{ price: 30 }] },
-      { id: '2', name: 'Studio 7', address: 'Av. Central, 456', city: 'Jaú', is_open: true, rating: 4.7, total_reviews: 89, distance_km: 0.8, services: [{ price: 25 }] },
-      { id: '3', name: 'Noble Barbers', address: 'Rua Prudente de Moraes, 321', city: 'Jaú', is_open: true, rating: 4.8, total_reviews: 67, distance_km: 1.1, services: [{ price: 45 }] },
-    ];
-    
-    if (location && location.toLowerCase().includes('são paulo')) {
-      return [
-        { id: '1', name: 'Barber King', address: 'Rua Consolação, 2000', city: 'São Paulo', is_open: true, rating: 4.9, total_reviews: 156, distance_km: 0.5, services: [{ price: 35 }] },
-        { id: '2', name: 'Studio 7', address: 'Av. Paulista, 1500', city: 'São Paulo', is_open: true, rating: 4.8, total_reviews: 102, distance_km: 1.2, services: [{ price: 30 }] },
-        { id: '3', name: 'Barber Club', address: 'Rua Oscar Freire, 456', city: 'São Paulo', is_open: true, rating: 4.7, total_reviews: 89, distance_km: 1.8, services: [{ price: 40 }] },
-      ];
-    }
-    
-    return baseShops;
-  };
+
 
   const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords) => {
     setLoading(true);
@@ -104,10 +88,10 @@ export default function HomePage({ navigate }) {
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
       }
-    } catch {
-      console.error('Erro ao buscar barbearias da API');
+    } catch (err) {
+      console.error('Erro ao buscar barbearias da API:', err);
       if (isMountedRef.current) {
-        setShops(getDemoShops(manualLocationValue));
+        setShops([]);
       }
     }
     if (isMountedRef.current) {
@@ -128,10 +112,10 @@ export default function HomePage({ navigate }) {
         setShops(data?.barbershops || []);
         showToast(value ? 'Local aplicado' : 'Endereço limpo');
       }
-    } catch {
-      console.error('Erro ao aplicar localização');
+    } catch (err) {
+      console.error('Erro ao aplicar localização:', err);
       if (isMountedRef.current) {
-        setShops(getDemoShops(value));
+        setShops([]);
       }
     }
     if (isMountedRef.current) {
@@ -150,10 +134,10 @@ export default function HomePage({ navigate }) {
         if (isMountedRef.current) {
           setShops(data?.barbershops || []);
         }
-      } catch {
-        console.error('Erro ao carregar barbearias');
+      } catch (err) {
+        console.error('Erro ao carregar barbearias:', err);
         if (isMountedRef.current) {
-          setShops(getDemoShops(manualLocation));
+          setShops([]);
         }
       }
       if (isMountedRef.current) {
@@ -393,6 +377,13 @@ export default function HomePage({ navigate }) {
 
         {loading ? (
           <div className="loading"><div className="spinner" /><span>Buscando barbearias...</span></div>
+        ) : shops.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
+            <div style={{ fontSize: 14, marginBottom: 12 }}>Nenhuma barbearia encontrada</div>
+            <button className="btn-secondary" onClick={openGoogleMapsSearch} style={{ fontSize: 13 }}>
+              Ver no Google Maps
+            </button>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 20px' }}>
             {shops.map(shop => (
