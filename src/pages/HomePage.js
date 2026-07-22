@@ -11,6 +11,7 @@ export default function HomePage({ navigate }) {
   const { user } = useAuth();
   const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
   const [manualLocation, setManualLocation] = useState('');
@@ -18,29 +19,14 @@ export default function HomePage({ navigate }) {
   const [toast, setToast] = useState('');
   const [radius, setRadius] = useState(10);
   const [locationCoords, setLocationCoords] = useState(null);
+  const [showLocationInput, setShowLocationInput] = useState(false);
   const isMountedRef = useRef(true);
   const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions();
   const { location: deviceLocation, loading: deviceLocationLoading } = useGeolocation();
-  const hasLocation = Boolean(manualLocation || deviceLocation);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2600);
-  };
-
-  const getGoogleMapsSearchUrl = () => {
-    const query = manualLocation || locationText;
-    if (query) {
-      return `https://www.google.com/maps/search/barbearia+em+${encodeURIComponent(query)}`;
-    }
-    if (deviceLocation) {
-      return `https://www.google.com/maps/search/barbearia/@${deviceLocation.lat},${deviceLocation.lng},13z`;
-    }
-    return 'https://www.google.com/maps/search/barbearia';
-  };
-
-  const openGoogleMapsSearch = () => {
-    window.open(getGoogleMapsSearchUrl(), '_blank', 'noopener');
   };
 
   const geocodeAddress = async (address) => {
@@ -78,37 +64,33 @@ export default function HomePage({ navigate }) {
     return params;
   };
 
-
-
   const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords) => {
     setLoading(true);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
+
       const params = buildParams(searchValue, manualLocationValue, coords);
       const { data } = await barbershopsAPI.getAll(params);
       clearTimeout(timeoutId);
-      
+
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
       }
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.error('Requisição timeout');
         if (isMountedRef.current) {
           setShops([]);
           showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
         }
       } else {
-        console.error('Erro ao buscar barbearias da API:', err);
-        if (isMountedRef.current) {
-          setShops([]);
-        }
+        console.error('Erro ao buscar barbearias:', err);
+        if (isMountedRef.current) setShops([]);
       }
     }
     if (isMountedRef.current) {
       setLoading(false);
+      setInitialLoading(false);
     }
   }, [search, manualLocation, locationCoords, radius]);
 
@@ -119,80 +101,26 @@ export default function HomePage({ navigate }) {
     try {
       const coords = value ? await geocodeAddress(value) : null;
       setLocationCoords(coords);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
       const params = buildParams(search, value, coords);
       const { data } = await barbershopsAPI.getAll(params);
-      clearTimeout(timeoutId);
-      
       if (isMountedRef.current) {
         setShops(data?.barbershops || []);
         showToast(value ? 'Local aplicado' : 'Endereço limpo');
       }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        console.error('Requisição timeout');
-        if (isMountedRef.current) {
-          setShops([]);
-          showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
-        }
-      } else {
-        console.error('Erro ao aplicar localização:', err);
-        if (isMountedRef.current) {
-          setShops([]);
-        }
-      }
+    } catch {
+      if (isMountedRef.current) setShops([]);
     }
-    if (isMountedRef.current) {
-      setLoading(false);
-    }
+    if (isMountedRef.current) setLoading(false);
   };
 
   useEffect(() => {
     if (!locationCoords) return;
-
-    const loadShops = async () => {
-      setLoading(true);
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const params = buildParams(search, manualLocation, locationCoords, radius);
-        const { data } = await barbershopsAPI.getAll(params);
-        clearTimeout(timeoutId);
-        
-        if (isMountedRef.current) {
-          setShops(data?.barbershops || []);
-        }
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          console.error('Requisição timeout');
-          if (isMountedRef.current) {
-            setShops([]);
-            showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
-          }
-        } else {
-          console.error('Erro ao carregar barbearias:', err);
-          if (isMountedRef.current) {
-            setShops([]);
-          }
-        }
-      }
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    };
-
-    loadShops();
-  }, [radius, locationCoords, search, manualLocation]);
+    fetchShops(search, manualLocation, locationCoords);
+  }, [locationCoords, radius, search, manualLocation, fetchShops]);
 
   useEffect(() => {
     if (!deviceLocation) return;
-
     setLocationCoords(deviceLocation);
-
     const loadDeviceAddress = async () => {
       const address = await reverseGeocode(deviceLocation);
       if (isMountedRef.current && address) {
@@ -200,23 +128,15 @@ export default function HomePage({ navigate }) {
         setLocationText(address);
       }
     };
-
     loadDeviceAddress();
   }, [deviceLocation]);
 
-  const fetchedRef = useRef(false);
   useEffect(() => {
-    if (fetchedRef.current) return;
-    if (deviceLocationLoading) return;
-    if (deviceLocation) return;
-    fetchedRef.current = true;
     fetchShops();
-  }, [deviceLocationLoading, deviceLocation, fetchShops]);
+  }, []);
 
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
+    return () => { isMountedRef.current = false; };
   }, []);
 
   useEffect(() => {
@@ -228,6 +148,10 @@ export default function HomePage({ navigate }) {
     setFavShops(next);
     showToast(next.includes(shop.id) ? 'Barbearia favoritada' : 'Barbearia removida dos favoritos');
   };
+
+  const filteredShops = category === 'todos'
+    ? shops
+    : shops.filter(s => s.services?.some(svc => svc.category === category));
 
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
@@ -248,43 +172,37 @@ export default function HomePage({ navigate }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
             <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
-              {manualLocation ? manualLocation : 'Digite seu endereço abaixo'}
+              {manualLocation ? manualLocation : (
+                <span style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>
+                  Toque para definir localização
+                </span>
+              )}
             </div>
           </div>
         </div>
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      {!hasLocation && !deviceLocationLoading && (
+      {/* Location Input (toggle) */}
+      {(showLocationInput || !manualLocation) && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
           <input
             className="input-field"
             placeholder="Digite sua cidade, bairro ou endereço"
             value={locationText}
             onChange={(e) => {
-              const nextValue = e.target.value;
-              setLocationText(nextValue);
-              scheduleAddressSuggestions(nextValue);
+              setLocationText(e.target.value);
+              scheduleAddressSuggestions(e.target.value);
             }}
             onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
           />
-
           {showSuggestions && suggestions.length > 0 && (
             <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              background: 'var(--dark2)',
-              border: '1px solid var(--border)',
-              borderTop: 'none',
-              borderRadius: '0 0 12px 12px',
-              maxHeight: 280,
-              overflowY: 'auto',
-              zIndex: 1000,
-              marginTop: -1
+              position: 'absolute', top: '100%', left: 0, right: 0,
+              background: 'var(--dark2)', border: '1px solid var(--border)', borderTop: 'none',
+              borderRadius: '0 0 12px 12px', maxHeight: 280, overflowY: 'auto', zIndex: 1000, marginTop: -1
             }}>
               {suggestions.map((suggestion, idx) => (
                 <button
@@ -304,23 +222,15 @@ export default function HomePage({ navigate }) {
                         showToast('Local aplicado');
                       }
                     } catch {
-                      console.error('Erro ao buscar barbearias para sugestão');
-                      if (isMountedRef.current) setShops(getDemoShops(suggestion.label));
+                      if (isMountedRef.current) setShops([]);
                     }
                     if (isMountedRef.current) setLoading(false);
                   }}
                   style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '14px 16px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text)',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    borderBottom: '1px solid var(--border)',
-                    transition: 'background 0.15s'
+                    display: 'block', width: '100%', padding: '14px 16px',
+                    background: 'transparent', border: 'none', color: 'var(--text)',
+                    textAlign: 'left', cursor: 'pointer', fontSize: 14,
+                    borderBottom: '1px solid var(--border)', transition: 'background 0.15s'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -335,14 +245,23 @@ export default function HomePage({ navigate }) {
               ))}
             </div>
           )}
-
-          <button
-            className="btn-primary"
-            style={{ width: '100%', marginTop: 12, padding: '16px 18px', fontSize: 16, minHeight: 52 }}
-            onClick={handleApplyLocation}
-          >
-            Aplicar
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button className="btn-primary" style={{ flex: 1, padding: '16px 18px', fontSize: 16, minHeight: 52 }} onClick={handleApplyLocation}>
+              Aplicar
+            </button>
+            {manualLocation && (
+              <button className="btn-secondary" style={{ padding: '16px 18px', fontSize: 14, minHeight: 52 }} onClick={() => {
+                setLocationText('');
+                setManualLocation('');
+                setLocationCoords(null);
+                setShowLocationInput(false);
+                fetchShops(search, '', null);
+                showToast('Localização limpa');
+              }}>
+                Limpar
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -353,7 +272,7 @@ export default function HomePage({ navigate }) {
           <input
             className="input-field"
             style={{ paddingLeft: 40, paddingRight: 16, minHeight: 52, fontSize: 16 }}
-            placeholder="Buscar barbearias, serviços ou endereço..."
+            placeholder="Buscar barbearias ou serviços..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && fetchShops()}
@@ -362,16 +281,9 @@ export default function HomePage({ navigate }) {
         <button
           className="btn-primary"
           style={{ flexShrink: 0, minWidth: 120, padding: '14px 18px', fontSize: 16, minHeight: 52 }}
-          onClick={fetchShops}
+          onClick={() => fetchShops()}
         >
           Buscar
-        </button>
-        <button
-          className="btn-secondary"
-          style={{ flexShrink: 0, minWidth: 160, padding: '14px 18px', fontSize: 16, minHeight: 52 }}
-          onClick={openGoogleMapsSearch}
-        >
-          Ver no Google Maps
         </button>
       </div>
 
@@ -404,29 +316,32 @@ export default function HomePage({ navigate }) {
       </div>
 
       {/* Shops List */}
-      <div style={{ margin: '20px 0 0' }}>
+      <div style={{ margin: '20px 0 40px' }}>
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">{manualLocation ? 'Próximas da sua localização' : 'Próximas de você'}</div>
+            <div className="section-title">
+              {manualLocation ? 'Barbearias próximas' : 'Barbearias disponíveis'}
+            </div>
             {manualLocation && (
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Baseado na localização escolhida: {manualLocation}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
+               📍 {manualLocation} {locationCoords ? `· Raio de ${radius}km` : ''}
+              </div>
             )}
           </div>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{shops.length} encontradas</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>
         </div>
 
-        {loading ? (
-          <div className="loading"><div className="spinner" /><span>Buscando barbearias...</span></div>
-        ) : shops.length === 0 ? (
+        {initialLoading || loading ? (
+          <div className="loading"><div className="spinner" /><span>Carregando barbearias...</span></div>
+        ) : filteredShops.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
-            <div style={{ fontSize: 14, marginBottom: 12 }}>Nenhuma barbearia encontrada</div>
-            <button className="btn-secondary" onClick={openGoogleMapsSearch} style={{ fontSize: 13 }}>
-              Ver no Google Maps
-            </button>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>💈</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>Nenhuma barbearia encontrada</div>
+            <div style={{ fontSize: 13, marginBottom: 16 }}>Tente buscar por outro termo ou defina sua localização</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 20px' }}>
-            {shops.map(shop => (
+            {filteredShops.map(shop => (
               <ShopCard
                 key={shop.id}
                 shop={shop}
