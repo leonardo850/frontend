@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getFavoriteIds, toggleFavorite } from '../lib/favorites';
 import { barbershopsAPI } from '../lib/api';
@@ -7,22 +7,21 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
 export default function HomePage({ navigate }) {
-  const [shops, setShops] = useState([]);
   const { user } = useAuth();
-  const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [shops, setShops] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
   const [manualLocation, setManualLocation] = useState('');
+  const [locationCoords, setLocationCoords] = useState(null);
   const [category, setCategory] = useState('todos');
   const [toast, setToast] = useState('');
-  const [radius, setRadius] = useState(10);
-  const [locationCoords, setLocationCoords] = useState(null);
   const [showLocationInput, setShowLocationInput] = useState(false);
-  const isMountedRef = useRef(true);
+  const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
+  const mountedRef = useRef(true);
+  const abortRef = useRef(null);
   const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions();
-  const { location: deviceLocation, loading: deviceLocationLoading } = useGeolocation();
+  const { location: deviceLocation } = useGeolocation();
 
   const showToast = (msg) => {
     setToast(msg);
@@ -52,101 +51,92 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  const buildParams = (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords, radiusValue = radius) => {
-    const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
-    const params = {};
-    if (query) params.search = query;
-    if (coords) {
-      params.lat = coords.lat;
-      params.lng = coords.lng;
-      params.radius = radiusValue;
-    }
-    return params;
-  };
+  const loadShops = async (searchValue, manualLocationValue, coords) => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-  const fetchShops = useCallback(async (searchValue = search, manualLocationValue = manualLocation, coords = locationCoords) => {
     setLoading(true);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const params = {};
+      const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
+      if (query) params.search = query;
+      if (coords) {
+        params.lat = coords.lat;
+        params.lng = coords.lng;
+        params.radius = 10;
+      }
 
-      const params = buildParams(searchValue, manualLocationValue, coords);
-      const { data } = await barbershopsAPI.getAll(params);
-      clearTimeout(timeoutId);
-
-      if (isMountedRef.current) {
+      const { data } = await barbershopsAPI.getAll(params, controller.signal);
+      if (mountedRef.current) {
         setShops(data?.barbershops || []);
       }
     } catch (err) {
-      if (err.name === 'AbortError') {
-        if (isMountedRef.current) {
-          setShops([]);
-          showToast('Timeout ao buscar barbearias. Verifique sua conexão.');
-        }
-      } else {
-        console.error('Erro ao buscar barbearias:', err);
-        if (isMountedRef.current) setShops([]);
-      }
+      if (err.name === 'CanceledError' || err.name === 'AbortError') return;
+      console.error('Erro ao buscar barbearias:', err);
+      if (mountedRef.current) setShops([]);
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
-    if (isMountedRef.current) {
-      setLoading(false);
-      setInitialLoading(false);
-    }
-  }, [search, manualLocation, locationCoords, radius]);
-
-  const handleApplyLocation = async () => {
-    const value = locationText.trim();
-    setManualLocation(value);
-    setLoading(true);
-    try {
-      const coords = value ? await geocodeAddress(value) : null;
-      setLocationCoords(coords);
-      const params = buildParams(search, value, coords);
-      const { data } = await barbershopsAPI.getAll(params);
-      if (isMountedRef.current) {
-        setShops(data?.barbershops || []);
-        showToast(value ? 'Local aplicado' : 'Endereço limpo');
-      }
-    } catch {
-      if (isMountedRef.current) setShops([]);
-    }
-    if (isMountedRef.current) setLoading(false);
   };
 
   useEffect(() => {
-    if (!locationCoords) return;
-    fetchShops(search, manualLocation, locationCoords);
-  }, [locationCoords, radius, search, manualLocation, fetchShops]);
+    loadShops('', '', null);
+    return () => {
+      mountedRef.current = false;
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!deviceLocation) return;
     setLocationCoords(deviceLocation);
-    const loadDeviceAddress = async () => {
+    loadShops(search, manualLocation, deviceLocation);
+    (async () => {
       const address = await reverseGeocode(deviceLocation);
-      if (isMountedRef.current && address) {
+      if (mountedRef.current && address) {
         setManualLocation(address);
         setLocationText(address);
       }
-    };
-    loadDeviceAddress();
+    })();
   }, [deviceLocation]);
-
-  useEffect(() => {
-    fetchShops();
-  }, []);
-
-  useEffect(() => {
-    return () => { isMountedRef.current = false; };
-  }, []);
 
   useEffect(() => {
     setFavShops(getFavoriteIds('shop', user?.id));
   }, [user]);
 
+  const handleApplyLocation = async () => {
+    const value = locationText.trim();
+    setManualLocation(value);
+    if (value) {
+      const coords = await geocodeAddress(value);
+      setLocationCoords(coords);
+      loadShops(search, value, coords);
+    } else {
+      setLocationCoords(null);
+      loadShops(search, '', null);
+    }
+    setShowLocationInput(false);
+    showToast(value ? 'Local aplicado' : 'Endereço limpo');
+  };
+
+  const handleClearLocation = () => {
+    setLocationText('');
+    setManualLocation('');
+    setLocationCoords(null);
+    setShowLocationInput(false);
+    loadShops(search, '', null);
+    showToast('Localização limpa');
+  };
+
+  const handleSearch = () => {
+    loadShops(search, manualLocation, locationCoords);
+  };
+
   const handleToggleShopFavorite = (shop) => {
     const next = toggleFavorite('shop', user?.id, shop.id);
     setFavShops(next);
-    showToast(next.includes(shop.id) ? 'Barbearia favoritada' : 'Barbearia removida dos favoritos');
+    showToast(next.includes(shop.id) ? 'Barbearia favoritada' : 'Removida dos favoritos');
   };
 
   const filteredShops = category === 'todos'
@@ -183,7 +173,7 @@ export default function HomePage({ navigate }) {
         <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
       </div>
 
-      {/* Location Input (toggle) */}
+      {/* Location Input */}
       {(showLocationInput || !manualLocation) && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
           <input
@@ -209,22 +199,12 @@ export default function HomePage({ navigate }) {
                   key={idx}
                   onClick={async () => {
                     setLocationText(suggestion.label);
-                    setManualLocation(suggestion.label);
                     setShowSuggestions(false);
-                    setLoading(true);
-                    try {
-                      const coords = await geocodeAddress(suggestion.label);
-                      setLocationCoords(coords);
-                      const params = buildParams(search, suggestion.label, coords);
-                      const { data } = await barbershopsAPI.getAll(params);
-                      if (isMountedRef.current) {
-                        setShops(data?.barbershops || []);
-                        showToast('Local aplicado');
-                      }
-                    } catch {
-                      if (isMountedRef.current) setShops([]);
-                    }
-                    if (isMountedRef.current) setLoading(false);
+                    const coords = await geocodeAddress(suggestion.label);
+                    setManualLocation(suggestion.label);
+                    setLocationCoords(coords);
+                    loadShops(search, suggestion.label, coords);
+                    showToast('Local aplicado');
                   }}
                   style={{
                     display: 'block', width: '100%', padding: '14px 16px',
@@ -250,14 +230,7 @@ export default function HomePage({ navigate }) {
               Aplicar
             </button>
             {manualLocation && (
-              <button className="btn-secondary" style={{ padding: '16px 18px', fontSize: 14, minHeight: 52 }} onClick={() => {
-                setLocationText('');
-                setManualLocation('');
-                setLocationCoords(null);
-                setShowLocationInput(false);
-                fetchShops(search, '', null);
-                showToast('Localização limpa');
-              }}>
+              <button className="btn-secondary" style={{ padding: '16px 18px', fontSize: 14, minHeight: 52 }} onClick={handleClearLocation}>
                 Limpar
               </button>
             )}
@@ -275,14 +248,10 @@ export default function HomePage({ navigate }) {
             placeholder="Buscar barbearias ou serviços..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && fetchShops()}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
         </div>
-        <button
-          className="btn-primary"
-          style={{ flexShrink: 0, minWidth: 120, padding: '14px 18px', fontSize: 16, minHeight: 52 }}
-          onClick={() => fetchShops()}
-        >
+        <button className="btn-primary" style={{ flexShrink: 0, minWidth: 120, padding: '14px 18px', fontSize: 16, minHeight: 52 }} onClick={handleSearch}>
           Buscar
         </button>
       </div>
@@ -324,14 +293,14 @@ export default function HomePage({ navigate }) {
             </div>
             {manualLocation && (
               <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-               📍 {manualLocation} {locationCoords ? `· Raio de ${radius}km` : ''}
+                📍 {manualLocation}
               </div>
             )}
           </div>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>
+          {!loading && <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>}
         </div>
 
-        {initialLoading || loading ? (
+        {loading ? (
           <div className="loading"><div className="spinner" /><span>Carregando barbearias...</span></div>
         ) : filteredShops.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
