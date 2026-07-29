@@ -6,10 +6,55 @@ import ShopCard from '../components/ShopCard';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
+const REQUEST_TIMEOUT = 10000;
+
+const DEMO_SHOPS = [
+  {
+    id: 'demo-1', name: 'Barbearia do Correa',
+    description: 'Tradicional barbearia da cidade, referência em cortes clássicos e barba.',
+    address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP',
+    phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835,
+    is_open: true, rating: 4.8, total_reviews: 156,
+    distance_km: null,
+    services: [
+      { id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' },
+      { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' },
+      { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' },
+    ],
+  },
+  {
+    id: 'demo-2', name: 'Old King Barbershop',
+    description: 'Barbearia moderna especializada em cortes degradê e barba estilizada.',
+    address: 'Av. São João, 789', city: 'São José dos Campos', state: 'SP',
+    phone: '(12) 3922-2002', latitude: -23.1960, longitude: -45.8770,
+    is_open: true, rating: 4.9, total_reviews: 203,
+    distance_km: null,
+    services: [
+      { id: 'ds4', name: 'Corte Degradê', price: 35, duration_minutes: 35, category: 'corte' },
+      { id: 'ds5', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' },
+      { id: 'ds6', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' },
+    ],
+  },
+  {
+    id: 'demo-3', name: 'Barbearia São Benedito',
+    description: 'Referência no centro há mais de 20 anos, cortes tradicionais e barba.',
+    address: 'Rua XV de Novembro, 456', city: 'São José dos Campos', state: 'SP',
+    phone: '(12) 3923-3003', latitude: -23.1895, longitude: -45.8840,
+    is_open: true, rating: 4.7, total_reviews: 189,
+    distance_km: null,
+    services: [
+      { id: 'ds7', name: 'Corte Tradicional', price: 28, duration_minutes: 30, category: 'corte' },
+      { id: 'ds8', name: 'Barba Tradicional', price: 22, duration_minutes: 25, category: 'barba' },
+      { id: 'ds9', name: 'Corte + Barba', price: 45, duration_minutes: 50, category: 'combo' },
+    ],
+  },
+];
+
 export default function HomePage({ navigate }) {
   const { user } = useAuth();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
   const [manualLocation, setManualLocation] = useState('');
@@ -57,6 +102,10 @@ export default function HomePage({ navigate }) {
     abortRef.current = controller;
 
     setLoading(true);
+    setError('');
+
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
     try {
       const params = {};
       const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
@@ -67,14 +116,37 @@ export default function HomePage({ navigate }) {
         params.radius = 10;
       }
 
+      console.log('🔄 Buscando barbearias da API...', params);
       const { data } = await barbershopsAPI.getAll(params, controller.signal);
+      clearTimeout(timeoutId);
+
       if (mountedRef.current) {
-        setShops(data?.barbershops || []);
+        const shopsData = data?.barbershops || [];
+        console.log('✅ Barbearias carregadas:', shopsData.length);
+        if (shopsData.length > 0) {
+          setShops(shopsData);
+          setError('');
+        } else {
+          setShops(DEMO_SHOPS);
+          setError('Banco de dados vazio. Exibindo dados de demonstração.');
+        }
       }
     } catch (err) {
-      if (err.name === 'CanceledError' || err.name === 'AbortError') return;
-      console.error('Erro ao buscar barbearias:', err);
-      if (mountedRef.current) setShops([]);
+      clearTimeout(timeoutId);
+      console.error('❌ Erro na API:', err.name, err.message, err.code);
+
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        if (mountedRef.current) {
+          setShops(DEMO_SHOPS);
+          setError('Servidor demorou a responder. Exibindo dados de demonstração.');
+        }
+        return;
+      }
+
+      if (mountedRef.current) {
+        setShops(DEMO_SHOPS);
+        setError('API indisponível. Exibindo dados de demonstração.');
+      }
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -286,6 +358,15 @@ export default function HomePage({ navigate }) {
 
       {/* Shops List */}
       <div style={{ margin: '20px 0 40px' }}>
+        {error && (
+          <div style={{ margin: '0 20px 12px', padding: '10px 14px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 10, color: 'var(--red)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>⚠️</span>
+            <span style={{ flex: 1 }}>{error}</span>
+            <button className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => loadShops(search, manualLocation, locationCoords)}>
+              Tentar novamente
+            </button>
+          </div>
+        )}
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
             <div className="section-title">
