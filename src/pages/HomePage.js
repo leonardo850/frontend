@@ -6,55 +6,16 @@ import ShopCard from '../components/ShopCard';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
-const REQUEST_TIMEOUT = 10000;
-
-const DEMO_SHOPS = [
-  {
-    id: 'demo-1', name: 'Barbearia do Correa',
-    description: 'Tradicional barbearia da cidade, referência em cortes clássicos e barba.',
-    address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP',
-    phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835,
-    is_open: true, rating: 4.8, total_reviews: 156,
-    distance_km: null,
-    services: [
-      { id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' },
-      { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' },
-      { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' },
-    ],
-  },
-  {
-    id: 'demo-2', name: 'Old King Barbershop',
-    description: 'Barbearia moderna especializada em cortes degradê e barba estilizada.',
-    address: 'Av. São João, 789', city: 'São José dos Campos', state: 'SP',
-    phone: '(12) 3922-2002', latitude: -23.1960, longitude: -45.8770,
-    is_open: true, rating: 4.9, total_reviews: 203,
-    distance_km: null,
-    services: [
-      { id: 'ds4', name: 'Corte Degradê', price: 35, duration_minutes: 35, category: 'corte' },
-      { id: 'ds5', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' },
-      { id: 'ds6', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' },
-    ],
-  },
-  {
-    id: 'demo-3', name: 'Barbearia São Benedito',
-    description: 'Referência no centro há mais de 20 anos, cortes tradicionais e barba.',
-    address: 'Rua XV de Novembro, 456', city: 'São José dos Campos', state: 'SP',
-    phone: '(12) 3923-3003', latitude: -23.1895, longitude: -45.8840,
-    is_open: true, rating: 4.7, total_reviews: 189,
-    distance_km: null,
-    services: [
-      { id: 'ds7', name: 'Corte Tradicional', price: 28, duration_minutes: 30, category: 'corte' },
-      { id: 'ds8', name: 'Barba Tradicional', price: 22, duration_minutes: 25, category: 'barba' },
-      { id: 'ds9', name: 'Corte + Barba', price: 45, duration_minutes: 50, category: 'combo' },
-    ],
-  },
+const DEMO = [
+  { id: 'd1', name: 'Barbearia do Correa', address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP', phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835, is_open: true, rating: 4.8, total_reviews: 156, distance_km: null, services: [{ id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' }, { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }] },
+  { id: 'd2', name: 'Old King Barbershop', address: 'Av. São João, 789', city: 'São José dos Campos', state: 'SP', phone: '(12) 3922-2002', latitude: -23.1960, longitude: -45.8770, is_open: true, rating: 4.9, total_reviews: 203, distance_km: null, services: [{ id: 'ds4', name: 'Corte Degradê', price: 35, duration_minutes: 35, category: 'corte' }, { id: 'ds5', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds6', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }] },
+  { id: 'd3', name: 'Barbearia São Benedito', address: 'Rua XV de Novembro, 456', city: 'São José dos Campos', state: 'SP', phone: '(12) 3923-3003', latitude: -23.1895, longitude: -45.8840, is_open: true, rating: 4.7, total_reviews: 189, distance_km: null, services: [{ id: 'ds7', name: 'Corte Tradicional', price: 28, duration_minutes: 30, category: 'corte' }, { id: 'ds8', name: 'Barba Tradicional', price: 22, duration_minutes: 25, category: 'barba' }, { id: 'ds9', name: 'Corte + Barba', price: 45, duration_minutes: 50, category: 'combo' }] },
 ];
 
 export default function HomePage({ navigate }) {
   const { user } = useAuth();
-  const [shops, setShops] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [shops, setShops] = useState(DEMO);
+  const [apiStatus, setApiStatus] = useState('carregando');
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
   const [manualLocation, setManualLocation] = useState('');
@@ -85,75 +46,43 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  const reverseGeocode = async ({ lat, lng }) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      if (!res.ok) return null;
-      const json = await res.json();
-      return json?.display_name || null;
-    } catch {
-      return null;
-    }
-  };
-
-  const loadShops = async (searchValue, manualLocationValue, coords) => {
+  const fetchFromAPI = async (searchValue, manualLocationValue, coords) => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError('');
-
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
       const params = {};
       const query = [searchValue, manualLocationValue].filter(Boolean).join(' ').trim();
       if (query) params.search = query;
-      if (coords) {
-        params.lat = coords.lat;
-        params.lng = coords.lng;
-        params.radius = 10;
-      }
+      if (coords) { params.lat = coords.lat; params.lng = coords.lng; params.radius = 10; }
 
-      console.log('🔄 Buscando barbearias da API...', params);
       const { data } = await barbershopsAPI.getAll(params, controller.signal);
       clearTimeout(timeoutId);
 
       if (mountedRef.current) {
-        const shopsData = data?.barbershops || [];
-        console.log('✅ Barbearias carregadas:', shopsData.length);
-        if (shopsData.length > 0) {
-          setShops(shopsData);
-          setError('');
+        const apiShops = data?.barbershops || [];
+        if (apiShops.length > 0) {
+          setShops(apiShops);
+          setApiStatus('ok');
         } else {
-          setShops(DEMO_SHOPS);
-          setError('Banco de dados vazio. Exibindo dados de demonstração.');
+          setApiStatus('vazio');
         }
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error('❌ Erro na API:', err.name, err.message, err.code);
-
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
-        if (mountedRef.current) {
-          setShops(DEMO_SHOPS);
-          setError('Servidor demorou a responder. Exibindo dados de demonstração.');
-        }
+        if (mountedRef.current) setApiStatus('timeout');
         return;
       }
-
-      if (mountedRef.current) {
-        setShops(DEMO_SHOPS);
-        setError('API indisponível. Exibindo dados de demonstração.');
-      }
-    } finally {
-      if (mountedRef.current) setLoading(false);
+      if (mountedRef.current) setApiStatus('erro');
     }
   };
 
   useEffect(() => {
-    loadShops('', '', null);
+    fetchFromAPI('', '', null);
     return () => {
       mountedRef.current = false;
       if (abortRef.current) abortRef.current.abort();
@@ -163,13 +92,17 @@ export default function HomePage({ navigate }) {
   useEffect(() => {
     if (!deviceLocation) return;
     setLocationCoords(deviceLocation);
-    loadShops(search, manualLocation, deviceLocation);
+    fetchFromAPI(search, manualLocation, deviceLocation);
     (async () => {
-      const address = await reverseGeocode(deviceLocation);
-      if (mountedRef.current && address) {
-        setManualLocation(address);
-        setLocationText(address);
-      }
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${deviceLocation.lat}&lon=${deviceLocation.lng}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (mountedRef.current && json?.display_name) {
+          setManualLocation(json.display_name);
+          setLocationText(json.display_name);
+        }
+      } catch {}
     })();
   }, [deviceLocation]);
 
@@ -178,42 +111,30 @@ export default function HomePage({ navigate }) {
   }, [user]);
 
   const handleApplyLocation = async () => {
-    const value = locationText.trim();
-    setManualLocation(value);
-    if (value) {
-      const coords = await geocodeAddress(value);
-      setLocationCoords(coords);
-      loadShops(search, value, coords);
-    } else {
-      setLocationCoords(null);
-      loadShops(search, '', null);
-    }
+    const v = locationText.trim();
+    setManualLocation(v);
+    if (v) { const c = await geocodeAddress(v); setLocationCoords(c); fetchFromAPI(search, v, c); }
+    else { setLocationCoords(null); fetchFromAPI(search, '', null); }
     setShowLocationInput(false);
-    showToast(value ? 'Local aplicado' : 'Endereço limpo');
+    showToast(v ? 'Local aplicado' : 'Limpo');
   };
 
   const handleClearLocation = () => {
-    setLocationText('');
-    setManualLocation('');
-    setLocationCoords(null);
-    setShowLocationInput(false);
-    loadShops(search, '', null);
+    setLocationText(''); setManualLocation(''); setLocationCoords(null);
+    setShowLocationInput(false); fetchFromAPI(search, '', null);
     showToast('Localização limpa');
   };
 
-  const handleSearch = () => {
-    loadShops(search, manualLocation, locationCoords);
-  };
+  const handleSearch = () => fetchFromAPI(search, manualLocation, locationCoords);
 
   const handleToggleShopFavorite = (shop) => {
     const next = toggleFavorite('shop', user?.id, shop.id);
     setFavShops(next);
-    showToast(next.includes(shop.id) ? 'Barbearia favoritada' : 'Removida dos favoritos');
+    showToast(next.includes(shop.id) ? 'Favoritada' : 'Removida');
   };
 
   const filteredShops = category === 'todos'
-    ? shops
-    : shops.filter(s => s.services?.some(svc => svc.category === category));
+    ? shops : shops.filter(s => s.services?.some(svc => svc.category === category));
 
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
@@ -235,9 +156,7 @@ export default function HomePage({ navigate }) {
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
             <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
               {manualLocation ? manualLocation : (
-                <span style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>
-                  Toque para definir localização
-                </span>
+                <span style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</span>
               )}
             </div>
           </div>
@@ -248,87 +167,45 @@ export default function HomePage({ navigate }) {
       {/* Location Input */}
       {(showLocationInput || !manualLocation) && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
-          <input
-            className="input-field"
-            placeholder="Digite sua cidade, bairro ou endereço"
-            value={locationText}
-            onChange={(e) => {
-              setLocationText(e.target.value);
-              scheduleAddressSuggestions(e.target.value);
-            }}
+          <input className="input-field" placeholder="Digite sua cidade, bairro ou endereço"
+            value={locationText} onChange={e => { setLocationText(e.target.value); scheduleAddressSuggestions(e.target.value); }}
             onKeyDown={e => e.key === 'Enter' && handleApplyLocation()}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }}
-          />
+            style={{ width: '100%', padding: '20px 18px', fontSize: 18, minHeight: 68 }} />
           {showSuggestions && suggestions.length > 0 && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0,
-              background: 'var(--dark2)', border: '1px solid var(--border)', borderTop: 'none',
-              borderRadius: '0 0 12px 12px', maxHeight: 280, overflowY: 'auto', zIndex: 1000, marginTop: -1
-            }}>
-              {suggestions.map((suggestion, idx) => (
-                <button
-                  key={idx}
-                  onClick={async () => {
-                    setLocationText(suggestion.label);
-                    setShowSuggestions(false);
-                    const coords = await geocodeAddress(suggestion.label);
-                    setManualLocation(suggestion.label);
-                    setLocationCoords(coords);
-                    loadShops(search, suggestion.label, coords);
-                    showToast('Local aplicado');
-                  }}
-                  style={{
-                    display: 'block', width: '100%', padding: '14px 16px',
-                    background: 'transparent', border: 'none', color: 'var(--text)',
-                    textAlign: 'left', cursor: 'pointer', fontSize: 14,
-                    borderBottom: '1px solid var(--border)', transition: 'background 0.15s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--dark3)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{suggestion.label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                      {suggestion.source === 'google' ? 'Google' : 'OSM'}
-                    </span>
-                  </div>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--dark2)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 12px 12px', maxHeight: 280, overflowY: 'auto', zIndex: 1000, marginTop: -1 }}>
+              {suggestions.map((s, i) => (
+                <button key={i} onClick={async () => {
+                  setLocationText(s.label); setShowSuggestions(false);
+                  const c = await geocodeAddress(s.label);
+                  setManualLocation(s.label); setLocationCoords(c); fetchFromAPI(search, s.label, c);
+                  showToast('Local aplicado');
+                }} style={{ display: 'block', width: '100%', padding: '14px 16px', background: 'transparent', border: 'none', color: 'var(--text)', textAlign: 'left', cursor: 'pointer', fontSize: 14, borderBottom: '1px solid var(--border)' }}>
+                  <span>{s.label}</span>
                 </button>
               ))}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn-primary" style={{ flex: 1, padding: '16px 18px', fontSize: 16, minHeight: 52 }} onClick={handleApplyLocation}>
-              Aplicar
-            </button>
-            {manualLocation && (
-              <button className="btn-secondary" style={{ padding: '16px 18px', fontSize: 14, minHeight: 52 }} onClick={handleClearLocation}>
-                Limpar
-              </button>
-            )}
+            <button className="btn-primary" style={{ flex: 1, minHeight: 52 }} onClick={handleApplyLocation}>Aplicar</button>
+            {manualLocation && <button className="btn-secondary" style={{ minHeight: 52 }} onClick={handleClearLocation}>Limpar</button>}
           </div>
         </div>
       )}
 
       {/* Search */}
-      <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 0 }}>
-          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: 16 }}>🔍</span>
-          <input
-            className="input-field"
-            style={{ paddingLeft: 40, paddingRight: 16, minHeight: 52, fontSize: 16 }}
-            placeholder="Buscar barbearias ou serviços..."
-            value={search}
+      <div style={{ margin: '12px 20px 0', display: 'flex', gap: 10 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔍</span>
+          <input className="input-field" style={{ paddingLeft: 40, minHeight: 52, fontSize: 16 }}
+            placeholder="Buscar barbearias..." value={search}
             onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          />
+            onKeyDown={e => e.key === 'Enter' && handleSearch()} />
         </div>
-        <button className="btn-primary" style={{ flexShrink: 0, minWidth: 120, padding: '14px 18px', fontSize: 16, minHeight: 52 }} onClick={handleSearch}>
-          Buscar
-        </button>
+        <button className="btn-primary" style={{ width: 'auto', minWidth: 100, minHeight: 52 }} onClick={handleSearch}>Buscar</button>
       </div>
 
-      {/* Promo banner */}
+      {/* Promo */}
       <div style={{ margin: '16px 20px 0', background: 'linear-gradient(135deg, var(--gold), #6BA8F7)', borderRadius: 14, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontWeight: 700, color: '#0F0F0F', fontSize: 15 }}>Primeira barba grátis!</div>
@@ -343,12 +220,7 @@ export default function HomePage({ navigate }) {
         <div style={{ display: 'flex', gap: 10, padding: '0 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {categories.map(c => (
             <button key={c.id} onClick={() => setCategory(c.id)}
-              style={{
-                flexShrink: 0, background: category === c.id ? 'var(--gold)' : 'var(--dark3)',
-                border: `1px solid ${category === c.id ? 'var(--gold)' : 'var(--border)'}`,
-                borderRadius: 10, padding: '10px 16px', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 68
-              }}>
+              style={{ flexShrink: 0, background: category === c.id ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${category === c.id ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 68 }}>
               <span style={{ fontSize: 18 }}>{c.icon}</span>
               <span style={{ fontSize: 11, fontWeight: 500, color: category === c.id ? 'var(--dark)' : 'var(--muted)', whiteSpace: 'nowrap' }}>{c.label}</span>
             </button>
@@ -358,32 +230,32 @@ export default function HomePage({ navigate }) {
 
       {/* Shops List */}
       <div style={{ margin: '20px 0 40px' }}>
-        {error && (
+        {(apiStatus === 'timeout' || apiStatus === 'erro') && (
           <div style={{ margin: '0 20px 12px', padding: '10px 14px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 10, color: 'var(--red)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>⚠️</span>
-            <span style={{ flex: 1 }}>{error}</span>
-            <button className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }} onClick={() => loadShops(search, manualLocation, locationCoords)}>
-              Tentar novamente
-            </button>
+            <span style={{ flex: 1 }}>
+              {apiStatus === 'timeout' ? 'Servidor demorou a responder.' : 'API indisponível.'}
+              {' '}Exibindo dados locais.
+            </span>
+            <button className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }}
+              onClick={() => fetchFromAPI(search, manualLocation, locationCoords)}>Tentar</button>
+          </div>
+        )}
+        {apiStatus === 'carregando' && (
+          <div style={{ margin: '0 20px 12px', padding: '8px 14px', background: 'rgba(74,144,226,0.1)', border: '1px solid rgba(74,144,226,0.3)', borderRadius: 10, color: 'var(--gold)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="spinner" style={{ width: 14, height: 14, margin: 0 }} />
+            <span>Carregando dados do servidor...</span>
           </div>
         )}
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">
-              {manualLocation ? 'Barbearias próximas' : 'Barbearias disponíveis'}
-            </div>
-            {manualLocation && (
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-                📍 {manualLocation}
-              </div>
-            )}
+            <div className="section-title">{manualLocation ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
+            {manualLocation && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>📍 {manualLocation}</div>}
           </div>
-          {!loading && <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>}
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>
         </div>
 
-        {loading ? (
-          <div className="loading"><div className="spinner" /><span>Carregando barbearias...</span></div>
-        ) : filteredShops.length === 0 ? (
+        {filteredShops.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💈</div>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>Nenhuma barbearia encontrada</div>
@@ -392,13 +264,10 @@ export default function HomePage({ navigate }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 20px' }}>
             {filteredShops.map(shop => (
-              <ShopCard
-                key={shop.id}
-                shop={shop}
+              <ShopCard key={shop.id} shop={shop}
                 onClick={() => navigate('barbershop', { shop })}
                 favorited={favShops.includes(shop.id)}
-                onToggleFavorite={() => handleToggleShopFavorite(shop)}
-              />
+                onToggleFavorite={() => handleToggleShopFavorite(shop)} />
             ))}
           </div>
         )}
