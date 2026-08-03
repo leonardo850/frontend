@@ -264,8 +264,8 @@ export default function LoginPage({ navigate }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="input-field" placeholder="Cidade" value={form.city}
                 onChange={e => set('city', e.target.value)} style={{ flex: 1 }} />
-              <input className="input-field" placeholder="Estado (UF)" value={form.state} maxLength={2}
-                onChange={e => set('state', e.target.value.toUpperCase())} style={{ flex: '0 0 80px' }} />
+              <input className="input-field" placeholder="Estado" value={form.state} maxLength={2}
+                onChange={e => set('state', e.target.value.toUpperCase())} style={{ flex: '0 0 100px' }} />
             </div>
           </>
         )}
