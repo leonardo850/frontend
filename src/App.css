@@ -168,6 +168,21 @@ html, body {
   --red: #E74C3C;
 }
 
+.theme-pink {
+  --gold: #FF6B9D;
+  --gold-light: #FF9DBF;
+  --dark: #170B12;
+  --dark2: #1F1118;
+  --dark3: #2A1A22;
+  --surface: #301D26;
+  --border: #3A2430;
+  --text: #FFF0F4;
+  --muted: #C9A0AF;
+  --muted2: #8A6572;
+  --green: #27AE60;
+  --red: #E74C3C;
+}
+
 .shop-day-fab {
   position: fixed;
   right: 18px;

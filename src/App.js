@@ -68,6 +68,12 @@ export default function App() {
     localStorage.setItem('lebux_theme', theme);
   }, [theme]);
 
+  // Tema rosa para usuárias (pessoa física, não empresa)
+  useEffect(() => {
+    const isPink = !isCompany && user?.gender === 'feminino';
+    document.documentElement.classList.toggle('theme-pink', isPink);
+  }, [user, isCompany]);
+
   const toggleTheme = () => {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   };

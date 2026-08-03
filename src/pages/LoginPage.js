@@ -8,7 +8,7 @@ export default function LoginPage({ navigate }) {
   const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
   const [useNewSignup, setUseNewSignup] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', address: '', city: '', state: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', zipCode: '', gender: '', address: '', city: '', state: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -33,8 +33,11 @@ export default function LoginPage({ navigate }) {
         if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
         const pwdCheck = validatePassword(form.password);
         if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
+        if (!form.phone) { setError('Celular é obrigatório'); setLoading(false); return; }
+        if (!form.gender) { setError('Selecione o sexo'); setLoading(false); return; }
+        if (!form.zipCode) { setError('CEP é obrigatório'); setLoading(false); return; }
         if (!form.address || !form.city || !form.state) { setError('Endereço, cidade e estado são obrigatórios'); setLoading(false); return; }
-        const extraData = { address: form.address, city: form.city, state: form.state };
+        const extraData = { address: form.address, city: form.city, state: form.state, zip_code: form.zipCode, gender: form.gender };
         await register(form.name, emailCheck.value, form.password, form.phone, extraData);
         showToast('✅ Bem-vindo à Lebux!');
         setTimeout(() => navigate('home'), 1000);
@@ -59,6 +62,7 @@ export default function LoginPage({ navigate }) {
         city: signupData.city,
         state: signupData.state,
         zip_code: signupData.zipCode,
+        gender: signupData.gender,
       };
 
       // Se for empresa, adicionar dados da empresa
@@ -238,11 +242,23 @@ export default function LoginPage({ navigate }) {
         </div>
         {tab === 'register' && pwdStrength && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6 }}>{pwdStrength}</div>}
         {tab === 'register' && (
-          <input className="input-field" placeholder="Telefone (opcional)" type="tel" value={form.phone}
+          <input className="input-field" placeholder="Celular" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
         )}
         {tab === 'register' && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['masculino', 'feminino'].map(g => (
+              <button key={g} type="button" onClick={() => set('gender', g)}
+                style={{ flex: 1, background: form.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${form.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: form.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === 'register' && (
           <>
+            <input className="input-field" placeholder="CEP" value={form.zipCode}
+              onChange={e => set('zipCode', e.target.value)} />
             <input className="input-field" placeholder="Endereço" value={form.address}
               onChange={e => set('address', e.target.value)} />
             <div style={{ display: 'flex', gap: 8 }}>

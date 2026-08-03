@@ -7,7 +7,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
 const DEMO = [
-  { id: 'd1', name: 'Barbearia do Correa', address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP', phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835, is_open: true, rating: 4.8, total_reviews: 156, distance_km: null, services: [{ id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' }, { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }] },
+  { id: 'd1', name: 'Barbearia do Correa', address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP', phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835, is_open: true, rating: 4.8, total_reviews: 156, distance_km: null, services: [{ id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' }, { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }, { id: 'ds10', name: 'Corte Feminino', price: 40, duration_minutes: 40, category: 'corte_feminino' }] },
   { id: 'd2', name: 'Old King Barbershop', address: 'Av. São João, 789', city: 'São José dos Campos', state: 'SP', phone: '(12) 3922-2002', latitude: -23.1960, longitude: -45.8770, is_open: true, rating: 4.9, total_reviews: 203, distance_km: null, services: [{ id: 'ds4', name: 'Corte Degradê', price: 35, duration_minutes: 35, category: 'corte' }, { id: 'ds5', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds6', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }] },
   { id: 'd3', name: 'Barbearia São Benedito', address: 'Rua XV de Novembro, 456', city: 'São José dos Campos', state: 'SP', phone: '(12) 3923-3003', latitude: -23.1895, longitude: -45.8840, is_open: true, rating: 4.7, total_reviews: 189, distance_km: null, services: [{ id: 'ds7', name: 'Corte Tradicional', price: 28, duration_minutes: 30, category: 'corte' }, { id: 'ds8', name: 'Barba Tradicional', price: 22, duration_minutes: 25, category: 'barba' }, { id: 'ds9', name: 'Corte + Barba', price: 45, duration_minutes: 50, category: 'combo' }] },
 ];
@@ -152,10 +152,13 @@ export default function HomePage({ navigate }) {
   const filteredShops = category === 'todos'
     ? shops : shops.filter(s => s.services?.some(svc => svc.category === category));
 
+  const isFemale = user?.gender === 'feminino';
+
   const categories = [
     { id: 'todos', label: 'Todos', icon: '✂️' },
+    ...(isFemale ? [{ id: 'corte_feminino', label: 'Corte Feminino', icon: '💇‍♀️' }] : []),
     { id: 'corte', label: 'Corte', icon: '💈' },
-    { id: 'barba', label: 'Barba', icon: '🪒' },
+    ...(isFemale ? [] : [{ id: 'barba', label: 'Barba', icon: '🪒' }]),
     { id: 'pigmento', label: 'Pigmento', icon: '🎨' },
     { id: 'sobrancelha', label: 'Sobrancelha', icon: '👁️' },
   ];

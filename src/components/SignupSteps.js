@@ -8,6 +8,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
     email: '',
     password: '',
     phone: '',
+    gender: '',
     companyType: '', // 'none', 'barbershop', 'salon'
     cnpj: '',
     zipCode: '',
@@ -62,6 +63,14 @@ export default function SignupSteps({ onComplete, onCancel }) {
         setError(pwdCheck.msg);
         return;
       }
+      if (!formData.phone.trim()) {
+        setError('Celular é obrigatório');
+        return;
+      }
+      if (!formData.gender) {
+        setError('Selecione o sexo');
+        return;
+      }
       setStep(2);
     } else if (step === 2) {
       if (!formData.companyType) {
@@ -70,6 +79,10 @@ export default function SignupSteps({ onComplete, onCancel }) {
       }
       setStep(3);
     } else if (step === 3) {
+      if (!formData.zipCode.trim()) {
+        setError('CEP é obrigatório');
+        return;
+      }
       if (!formData.address.trim()) {
         setError('Endereço é obrigatório');
         return;
@@ -163,10 +176,21 @@ export default function SignupSteps({ onComplete, onCancel }) {
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Mínimo 8 caracteres, números e letras</div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Telefone (opcional)</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Celular *</label>
               <input className="input-field" placeholder="(11) 9 9999-9999"
                 value={formData.phone} onChange={e => set('phone', e.target.value)}
                 style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Sexo *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['masculino', 'feminino'].map(g => (
+                  <button key={g} type="button" onClick={() => set('gender', g)}
+                    style={{ flex: 1, background: formData.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${formData.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: formData.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                    {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -240,7 +264,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CEP</label>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CEP *</label>
               <input className="input-field" placeholder="12345-678"
                 value={formData.zipCode} onChange={e => set('zipCode', e.target.value)}
                 style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
