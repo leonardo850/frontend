@@ -32,8 +32,9 @@ export function AuthProvider({ children }) {
     return { ...data, user: normalizedUser };
   }, []);
 
-  const register = useCallback(async (name, email, password, phone) => {
-    const { data } = await authAPI.register({ name, email, password, phone });
+  const register = useCallback(async (name, email, password, phone, extraData = {}) => {
+    const payload = { name, email, password, phone, ...extraData };
+    const { data } = await authAPI.register(payload);
     localStorage.setItem('lebux_token', data.token);
     const normalizedUser = persistUser({ ...data.user, isCompany: data.user?.isCompany ?? data.isCompany });
     return { ...data, user: normalizedUser };

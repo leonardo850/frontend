@@ -81,7 +81,23 @@ export default function HomePage({ navigate }) {
     }
   };
 
+  // Auto-carregar endereço do usuário logado
   useEffect(() => {
+    if (!user?.address || !user?.city) return;
+    const fullAddress = `${user.address}, ${user.city}${user.state ? ` - ${user.state}` : ''}`;
+    setManualLocation(fullAddress);
+    setLocationText(fullAddress);
+    (async () => {
+      const c = await geocodeAddress(fullAddress);
+      if (mountedRef.current) {
+        setLocationCoords(c);
+        fetchFromAPI('', fullAddress, c);
+      }
+    })();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.address && user?.city) return;
     fetchFromAPI('', '', null);
     return () => {
       mountedRef.current = false;
@@ -155,7 +171,11 @@ export default function HomePage({ navigate }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
             <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
-              {manualLocation ? manualLocation : (
+              {manualLocation ? (
+                <span style={{ cursor: 'pointer' }} onClick={() => setShowLocationInput(true)} title="Clique para alterar">{manualLocation} ✏️</span>
+              ) : user?.address ? (
+                <span style={{ cursor: 'pointer' }} onClick={() => setShowLocationInput(true)} title="Clique para alterar">{user.address}{user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''} ✏️</span>
+              ) : (
                 <span style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</span>
               )}
             </div>
@@ -249,7 +269,7 @@ export default function HomePage({ navigate }) {
         )}
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">{manualLocation ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
+            <div className="section-title">{(manualLocation || user?.address) ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
             {manualLocation && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>📍 {manualLocation}</div>}
           </div>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>

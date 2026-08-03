@@ -8,7 +8,7 @@ export default function LoginPage({ navigate }) {
   const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
   const [useNewSignup, setUseNewSignup] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', address: '', city: '', state: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -33,7 +33,9 @@ export default function LoginPage({ navigate }) {
         if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
         const pwdCheck = validatePassword(form.password);
         if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
-        await register(form.name, emailCheck.value, form.password, form.phone);
+        if (!form.address || !form.city || !form.state) { setError('Endereço, cidade e estado são obrigatórios'); setLoading(false); return; }
+        const extraData = { address: form.address, city: form.city, state: form.state };
+        await register(form.name, emailCheck.value, form.password, form.phone, extraData);
         showToast('✅ Bem-vindo à Lebux!');
         setTimeout(() => navigate('home'), 1000);
       }
@@ -53,15 +55,15 @@ export default function LoginPage({ navigate }) {
         password: signupData.password,
         phone: signupData.phone,
         companyType: signupData.companyType,
+        address: signupData.address,
+        city: signupData.city,
+        state: signupData.state,
+        zip_code: signupData.zipCode,
       };
 
       // Se for empresa, adicionar dados da empresa
       if (signupData.companyType !== 'none') {
         registerData.cnpj = signupData.cnpj.replace(/\D/g, '');
-        registerData.address = signupData.address;
-        registerData.city = signupData.city;
-        registerData.state = signupData.state;
-        registerData.zipCode = signupData.zipCode;
         registerData.services = signupData.services;
       }
 
@@ -238,6 +240,18 @@ export default function LoginPage({ navigate }) {
         {tab === 'register' && (
           <input className="input-field" placeholder="Telefone (opcional)" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
+        )}
+        {tab === 'register' && (
+          <>
+            <input className="input-field" placeholder="Endereço" value={form.address}
+              onChange={e => set('address', e.target.value)} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input-field" placeholder="Cidade" value={form.city}
+                onChange={e => set('city', e.target.value)} style={{ flex: 1 }} />
+              <input className="input-field" placeholder="Estado (UF)" value={form.state} maxLength={2}
+                onChange={e => set('state', e.target.value.toUpperCase())} style={{ flex: '0 0 80px' }} />
+            </div>
+          </>
         )}
 
         {error && <div className="error-msg">{error}</div>}

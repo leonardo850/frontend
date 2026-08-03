@@ -68,18 +68,8 @@ export default function SignupSteps({ onComplete, onCancel }) {
         setError('Selecione o tipo de cadastro');
         return;
       }
-      if (formData.companyType === 'none') {
-        onComplete(formData);
-      } else {
-        setStep(3);
-      }
+      setStep(3);
     } else if (step === 3) {
-      // Validar CNPJ
-      const cnpjClean = formData.cnpj.replace(/\D/g, '');
-      if (cnpjClean.length !== 14) {
-        setError('CNPJ deve ter 14 dígitos');
-        return;
-      }
       if (!formData.address.trim()) {
         setError('Endereço é obrigatório');
         return;
@@ -88,7 +78,17 @@ export default function SignupSteps({ onComplete, onCancel }) {
         setError('Cidade e estado são obrigatórios');
         return;
       }
-      setStep(4);
+      const isCompany = formData.companyType !== 'none';
+      if (isCompany) {
+        const cnpjClean = formData.cnpj.replace(/\D/g, '');
+        if (cnpjClean.length !== 14) {
+          setError('CNPJ deve ter 14 dígitos');
+          return;
+        }
+        setStep(4);
+      } else {
+        onComplete(formData);
+      }
     } else if (step === 4) {
       if (formData.services.length === 0) {
         setError('Adicione pelo menos um serviço');
@@ -102,7 +102,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
     if (step === 1) {
       onCancel();
     } else if (step === 3 && formData.companyType === 'none') {
-      setStep(1);
+      setStep(2);
     } else {
       setStep(step - 1);
     }
@@ -123,7 +123,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <div className="logo-text" style={{ fontSize: 20, marginBottom: 8 }}>LE<span>BUX</span></div>
-          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Cadastro - Etapa {step} de {formData.companyType === 'none' ? 2 : 4}</div>
+          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Cadastro - Etapa {step} de {formData.companyType === 'none' ? 3 : 4}</div>
         </div>
 
         {/* Progress Bar */}
@@ -131,7 +131,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
           <div style={{
             height: '100%',
             background: 'var(--gold)',
-            width: `${formData.companyType === 'none' ? (step / 2) * 100 : (step / 4) * 100}%`,
+            width: `${formData.companyType === 'none' ? (step / 3) * 100 : (step / 4) * 100}%`,
             transition: '0.3s'
           }} />
         </div>
@@ -200,17 +200,22 @@ export default function SignupSteps({ onComplete, onCancel }) {
           </div>
         )}
 
-        {/* Step 3: Informações da Empresa */}
+        {/* Step 3: Endereço (e CNPJ para empresas) */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, fontWeight: 600 }}>Informações da {formData.companyType === 'barbershop' ? 'Barbearia' : 'Cabeleleira'}</h3>
+            {formData.companyType !== 'none'
+              ? <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, fontWeight: 600 }}>Informações da {formData.companyType === 'barbershop' ? 'Barbearia' : 'Cabeleleira'}</h3>
+              : <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, fontWeight: 600 }}>Seu Endereço</h3>
+            }
             
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CNPJ *</label>
-              <input className="input-field" placeholder="XX.XXX.XXX/XXXX-XX"
-                value={formatCNPJ(formData.cnpj)} onChange={e => set('cnpj', e.target.value)}
-                style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
-            </div>
+            {formData.companyType !== 'none' && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CNPJ *</label>
+                <input className="input-field" placeholder="XX.XXX.XXX/XXXX-XX"
+                  value={formatCNPJ(formData.cnpj)} onChange={e => set('cnpj', e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+              </div>
+            )}
 
             <div>
               <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Endereço *</label>
@@ -297,7 +302,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
           </button>
           <button onClick={handleNextStep}
             style={{ flex: 1, background: 'var(--gold)', border: 'none', borderRadius: 8, padding: '14px', color: '#0F0F0F', fontWeight: 600, cursor: 'pointer', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}>
-            {step === (formData.companyType === 'none' ? 2 : 4) ? 'Finalizar Cadastro' : 'Próxima'}
+            {step === (formData.companyType === 'none' ? 3 : 4) ? 'Finalizar Cadastro' : 'Próxima'}
           </button>
         </div>
       </div>
