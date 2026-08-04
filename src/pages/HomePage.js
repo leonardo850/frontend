@@ -155,16 +155,21 @@ export default function HomePage({ navigate }) {
                 <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>Sua localização</div>
                 {locationApplied && manualLocation ? (
                   <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>{manualLocation}</div>
-                ) : user?.address ? (
-                  <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>
-                    {user.address}
-                    <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 13 }}>
-                      {user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''}
-                    </span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 14, color: 'var(--muted)', cursor: 'pointer' }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</div>
-                )}
+                ) : (() => {
+                  const registeredAddress = [user?.address, user?.city, user?.state].filter(Boolean).join(', ');
+                  if (registeredAddress) {
+                    return (
+                      <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>
+                        {registeredAddress}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ fontSize: 14, color: 'var(--muted)', cursor: 'pointer' }} onClick={() => setShowLocationInput(true)}>
+                      Toque para definir sua localização
+                    </div>
+                  );
+                })()}
               </div>
               <button onClick={() => setShowLocationInput(s => !s)} title="Alterar localização"
                 style={{ background: 'var(--dark)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--gold)', padding: '8px 10px', flexShrink: 0 }}>🔍</button>
