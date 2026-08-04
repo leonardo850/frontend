@@ -55,16 +55,21 @@ export default function LoginPage({ navigate }) {
         showToast('✅ Bem-vindo!');
         setTimeout(() => navigate(nextIsCompany ? 'company' : 'home'), 1000);
       } else {
-        if (!form.name) { setError('Nome é obrigatório'); setLoading(false); return; }
+        if (!String(form.name || '').trim()) { setError('O campo "Nome" é obrigatório'); setLoading(false); return; }
+        if (!String(form.email || '').trim()) { setError('O campo "E-mail" é obrigatório'); setLoading(false); return; }
         const emailCheck = validateEmail(form.email);
         if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
+        if (!String(form.password || '').trim()) { setError('O campo "Senha" é obrigatória'); setLoading(false); return; }
         const pwdCheck = validatePassword(form.password);
         if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
+        if (!String(form.confirmPassword || '').trim()) { setError('O campo "Confirmar senha" é obrigatório'); setLoading(false); return; }
         if (form.password !== form.confirmPassword) { setError('As senhas não coincidem'); setLoading(false); return; }
-        if (!form.phone) { setError('Celular é obrigatório'); setLoading(false); return; }
-        if (!form.gender) { setError('Selecione o sexo'); setLoading(false); return; }
-        if (!form.zipCode) { setError('CEP é obrigatório'); setLoading(false); return; }
-        if (!form.address || !form.city || !form.state) { setError('Endereço, cidade e estado são obrigatórios'); setLoading(false); return; }
+        if (!String(form.phone || '').trim()) { setError('O campo "Celular" é obrigatório'); setLoading(false); return; }
+        if (!String(form.gender || '').trim()) { setError('O campo "Sexo" é obrigatório'); setLoading(false); return; }
+        if (!String(form.zipCode || '').trim()) { setError('O campo "CEP" é obrigatório'); setLoading(false); return; }
+        if (!String(form.address || '').trim()) { setError('O campo "Endereço" é obrigatório'); setLoading(false); return; }
+        if (!String(form.city || '').trim()) { setError('O campo "Cidade" é obrigatório'); setLoading(false); return; }
+        if (!String(form.state || '').trim()) { setError('O campo "Estado" é obrigatório'); setLoading(false); return; }
         const extraData = { address: form.address, city: form.city, state: form.state, zip_code: form.zipCode, gender: form.gender };
         await register(form.name, emailCheck.value, form.password, form.phone, extraData);
         showToast('✅ Bem-vindo à Lebux!');
@@ -242,6 +247,14 @@ export default function LoginPage({ navigate }) {
             {profileError && <div className="error-msg" style={{ margin: 0 }}>{profileError}</div>}
             <button className="btn-primary" disabled={profileLoading} onClick={async () => {
               setProfileError('');
+              if (!String(profileForm.name || '').trim()) { setProfileError('O campo "Nome" é obrigatório'); return; }
+              if (!String(profileForm.email || '').trim()) { setProfileError('O campo "E-mail" é obrigatório'); return; }
+              if (!String(profileForm.phone || '').trim()) { setProfileError('O campo "Celular" é obrigatório'); return; }
+              if (!String(profileForm.zip_code || '').trim()) { setProfileError('O campo "CEP" é obrigatório'); return; }
+              if (!String(profileForm.address || '').trim()) { setProfileError('O campo "Endereço" é obrigatório'); return; }
+              if (!String(profileForm.city || '').trim()) { setProfileError('O campo "Cidade" é obrigatório'); return; }
+              if (!String(profileForm.state || '').trim()) { setProfileError('O campo "Estado" é obrigatório'); return; }
+              if (!String(profileForm.gender || '').trim()) { setProfileError('O campo "Sexo" é obrigatório'); return; }
               setProfileLoading(true);
               try {
                 const { data } = await authAPI.updateProfile({

@@ -113,20 +113,24 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
       }
       setStep(3);
     } else if (step === 3) {
-      if (formData.companyType === 'none' && !formData.gender) {
-        setError('Selecione o sexo');
+      if (formData.companyType === 'none' && !String(formData.gender || '').trim()) {
+        setError('O campo "Sexo" é obrigatório');
         return;
       }
-      if (!formData.zipCode.trim()) {
-        setError('CEP é obrigatório');
+      if (!String(formData.zipCode || '').trim()) {
+        setError('O campo "CEP" é obrigatório');
         return;
       }
-      if (!formData.address.trim()) {
-        setError('Endereço é obrigatório');
+      if (!String(formData.address || '').trim()) {
+        setError('O campo "Endereço" é obrigatório');
         return;
       }
-      if (!formData.city.trim() || !formData.state.trim()) {
-        setError('Cidade e estado são obrigatórios');
+      if (!String(formData.city || '').trim()) {
+        setError('O campo "Cidade" é obrigatório');
+        return;
+      }
+      if (!String(formData.state || '').trim()) {
+        setError('O campo "Estado" é obrigatório');
         return;
       }
       const isCompany = formData.companyType !== 'none';
