@@ -6,10 +6,15 @@ export function validateEmail(email) {
   return { ok: true, value: norm };
 }
 
+export const PASSWORD_HINTS = 'Mínimo 8 caracteres, 1 letra maiúscula, 1 número e 1 caractere especial';
+
 export function validatePassword(pwd) {
   if (typeof pwd !== 'string') return { ok: false, msg: 'Senha inválida' };
   if (pwd.length < 8) return { ok: false, msg: 'Mínimo 8 caracteres' };
   if (pwd.length > 128) return { ok: false, msg: 'Máximo 128 caracteres' };
+  if (!/[A-Z]/.test(pwd)) return { ok: false, msg: 'Deve conter ao menos 1 letra maiúscula' };
+  if (!/[0-9]/.test(pwd)) return { ok: false, msg: 'Deve conter ao menos 1 número' };
+  if (!/[^A-Za-z0-9]/.test(pwd)) return { ok: false, msg: 'Deve conter ao menos 1 caractere especial' };
   return { ok: true };
 }
 

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { validateEmail, validatePassword } from '../utils/authValidation';
+import { validateEmail, validatePassword, PASSWORD_HINTS } from '../utils/authValidation';
 
-export default function SignupSteps({ onComplete, onCancel }) {
+export default function SignupSteps({ onComplete, onCancel, defaultCompanyType = '' }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     phone: '',
     gender: '',
-    companyType: '', // 'none', 'barbershop', 'salon'
+    companyType: defaultCompanyType, // 'none', 'barbershop', 'salon'
     cnpj: '',
     zipCode: '',
     address: '',
@@ -50,7 +51,7 @@ export default function SignupSteps({ onComplete, onCancel }) {
     
     if (step === 1) {
       if (!formData.name.trim()) {
-        setError('Nome é obrigatório');
+        setError(formData.companyType && formData.companyType !== 'none' ? 'Razão Social é obrigatória' : 'Nome é obrigatório');
         return;
       }
       const emailCheck = validateEmail(formData.email);
@@ -61,6 +62,10 @@ export default function SignupSteps({ onComplete, onCancel }) {
       const pwdCheck = validatePassword(formData.password);
       if (!pwdCheck.ok) {
         setError(pwdCheck.msg);
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('As senhas não coincidem');
         return;
       }
       if (!formData.phone.trim()) {
@@ -173,7 +178,13 @@ export default function SignupSteps({ onComplete, onCancel }) {
               <input className="input-field" placeholder="Mínimo 8 caracteres com números" type="password"
                 value={formData.password} onChange={e => set('password', e.target.value)}
                 style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Mínimo 8 caracteres, números e letras</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{PASSWORD_HINTS}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Confirmar Senha *</label>
+              <input className="input-field" placeholder="Digite a senha novamente" type="password"
+                value={formData.confirmPassword} onChange={e => set('confirmPassword', e.target.value)}
+                style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Celular *</label>

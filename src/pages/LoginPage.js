@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { authAPI } from '../lib/api';
-import { validateEmail, validatePassword, passwordStrength } from '../utils/authValidation';
+import { validateEmail, validatePassword, passwordStrength, PASSWORD_HINTS } from '../utils/authValidation';
 import SignupSteps from '../components/SignupSteps';
 
 export default function LoginPage({ navigate }) {
   const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
   const [useNewSignup, setUseNewSignup] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', zipCode: '', gender: '', address: '', city: '', state: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', zipCode: '', gender: '', address: '', city: '', state: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -33,6 +33,7 @@ export default function LoginPage({ navigate }) {
         if (!emailCheck.ok) { setError(emailCheck.msg); setLoading(false); return; }
         const pwdCheck = validatePassword(form.password);
         if (!pwdCheck.ok) { setError(pwdCheck.msg); setLoading(false); return; }
+        if (form.password !== form.confirmPassword) { setError('As senhas não coincidem'); setLoading(false); return; }
         if (!form.phone) { setError('Celular é obrigatório'); setLoading(false); return; }
         if (!form.gender) { setError('Selecione o sexo'); setLoading(false); return; }
         if (!form.zipCode) { setError('CEP é obrigatório'); setLoading(false); return; }
@@ -86,7 +87,7 @@ export default function LoginPage({ navigate }) {
   const [pwdError, setPwdError] = useState('');
 
   if (useNewSignup) {
-    return <SignupSteps onComplete={handleSignupComplete} onCancel={() => setUseNewSignup(false)} />;
+    return <SignupSteps onComplete={handleSignupComplete} onCancel={() => setUseNewSignup(false)} defaultCompanyType="barbershop" />;
   }
 
   if (user) {
@@ -241,6 +242,13 @@ export default function LoginPage({ navigate }) {
           </button>
         </div>
         {tab === 'register' && pwdStrength && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6 }}>{pwdStrength}</div>}
+        {tab === 'register' && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -4, lineHeight: 1.5 }}>{PASSWORD_HINTS}</div>
+        )}
+        {tab === 'register' && (
+          <input className="input-field" placeholder="Confirmar senha" type={showPassword ? 'text' : 'password'} value={form.confirmPassword}
+            onChange={e => set('confirmPassword', e.target.value)} />
+        )}
         {tab === 'register' && (
           <input className="input-field" placeholder="Celular" type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)} />
