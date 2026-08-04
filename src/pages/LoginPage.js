@@ -244,11 +244,11 @@ export default function LoginPage({ navigate }) {
               <input className="input-field" placeholder="Cidade" value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} style={{ flex: 1 }} />
               <input className="input-field" placeholder="Estado" value={profileForm.state} onChange={e => setProfileForm(f => ({ ...f, state: e.target.value.toUpperCase() }))} style={{ flex: '0 0 100px' }} />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['masculino', 'feminino'].map(g => (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {['masculino', 'feminino', 'indefinido'].map(g => (
                 <button key={g} type="button" onClick={() => setProfileForm(f => ({ ...f, gender: g }))}
-                  style={{ flex: 1, background: profileForm.gender === g ? 'var(--gold)' : 'var(--dark2)', border: `1px solid ${profileForm.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: profileForm.gender === g ? '#0F0F0F' : 'var(--text)', fontWeight: 600 }}>
-                  {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+                  style={{ flex: '1 1 calc(33% - 8px)', background: profileForm.gender === g ? 'var(--gold)' : 'var(--dark2)', border: `1px solid ${profileForm.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: profileForm.gender === g ? '#0F0F0F' : 'var(--text)', fontWeight: 600 }}>
+                  {g === 'masculino' ? '👨 Masculino' : g === 'feminino' ? '👩 Feminino' : '⚪ Indefinido'}
                 </button>
               ))}
             </div>
@@ -258,25 +258,23 @@ export default function LoginPage({ navigate }) {
               if (!String(profileForm.name || '').trim()) { setProfileError('O campo "Nome" é obrigatório'); return; }
               if (!String(profileForm.email || '').trim()) { setProfileError('O campo "E-mail" é obrigatório'); return; }
               if (!String(profileForm.phone || '').trim()) { setProfileError('O campo "Celular" é obrigatório'); return; }
-              if (!String(profileForm.zip_code || '').trim()) { setProfileError('O campo "CEP" é obrigatório'); return; }
-              if (!String(profileForm.address || '').trim()) { setProfileError('O campo "Endereço" é obrigatório'); return; }
-              if (!String(profileForm.city || '').trim()) { setProfileError('O campo "Cidade" é obrigatório'); return; }
-              if (!String(profileForm.state || '').trim()) { setProfileError('O campo "Estado" é obrigatório'); return; }
-              if (!String(profileForm.gender || '').trim()) { setProfileError('O campo "Sexo" é obrigatório'); return; }
               setProfileLoading(true);
               try {
-                const { data } = await authAPI.updateProfile({
+                const payload = {
                   name: profileForm.name,
                   email: profileForm.email,
                   phone: profileForm.phone,
-                  address: profileForm.address,
-                  number: profileForm.number,
-                  complement: profileForm.complement,
-                  city: profileForm.city,
-                  state: profileForm.state,
-                  zip_code: profileForm.zip_code,
-                  gender: profileForm.gender,
-                });
+                };
+
+                if (profileForm.address) payload.address = profileForm.address;
+                if (profileForm.number) payload.number = profileForm.number;
+                if (profileForm.complement) payload.complement = profileForm.complement;
+                if (profileForm.city) payload.city = profileForm.city;
+                if (profileForm.state) payload.state = profileForm.state;
+                if (profileForm.zip_code) payload.zip_code = profileForm.zip_code;
+                if (profileForm.gender) payload.gender = profileForm.gender;
+
+                const { data } = await authAPI.updateProfile(payload);
                 const updatedUser = { ...user, ...data.user };
                 localStorage.setItem('lebux_user', JSON.stringify(updatedUser));
                 window.location.reload();
@@ -407,11 +405,11 @@ export default function LoginPage({ navigate }) {
             onChange={e => set('phone', e.target.value)} />
         )}
         {tab === 'register' && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {['masculino', 'feminino'].map(g => (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {['masculino', 'feminino', 'indefinido'].map(g => (
               <button key={g} type="button" onClick={() => set('gender', g)}
-                style={{ flex: 1, background: form.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${form.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: form.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
-                {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+                style={{ flex: '1 1 calc(33% - 8px)', background: form.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${form.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: form.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                {g === 'masculino' ? '👨 Masculino' : g === 'feminino' ? '👩 Feminino' : '⚪ Indefinido'}
               </button>
             ))}
           </div>

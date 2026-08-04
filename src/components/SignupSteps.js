@@ -309,11 +309,11 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
             {formData.companyType === 'none' && (
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Sexo *</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {['masculino', 'feminino'].map(g => (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['masculino', 'feminino', 'indefinido'].map(g => (
                     <button key={g} type="button" onClick={() => set('gender', g)}
-                      style={{ flex: 1, background: formData.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${formData.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: formData.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
-                      {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+                      style={{ flex: '1 1 calc(33% - 8px)', background: formData.gender === g ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${formData.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: formData.gender === g ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                      {g === 'masculino' ? '👨 Masculino' : g === 'feminino' ? '👩 Feminino' : '⚪ Indefinido'}
                     </button>
                   ))}
                 </div>
