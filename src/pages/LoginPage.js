@@ -8,7 +8,7 @@ export default function LoginPage({ navigate }) {
   const { user, isCompany, login, register, logout } = useAuth();
   const [tab, setTab] = useState('login');
   const [useNewSignup, setUseNewSignup] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', zipCode: '', gender: '', address: '', city: '', state: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', zipCode: '', gender: '', address: '', number: '', complement: '', city: '', state: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
@@ -70,7 +70,7 @@ export default function LoginPage({ navigate }) {
         if (!String(form.address || '').trim()) { setError('O campo "Endereço" é obrigatório'); setLoading(false); return; }
         if (!String(form.city || '').trim()) { setError('O campo "Cidade" é obrigatório'); setLoading(false); return; }
         if (!String(form.state || '').trim()) { setError('O campo "Estado" é obrigatório'); setLoading(false); return; }
-        const extraData = { address: form.address, city: form.city, state: form.state, zip_code: form.zipCode, gender: form.gender };
+        const extraData = { address: form.address, number: form.number, complement: form.complement, city: form.city, state: form.state, zip_code: form.zipCode, gender: form.gender };
         await register(form.name, emailCheck.value, form.password, form.phone, extraData);
         showToast('✅ Bem-vindo à Lebux!');
         setTimeout(() => navigate('home'), 1000);
@@ -92,6 +92,8 @@ export default function LoginPage({ navigate }) {
         phone: signupData.phone,
         companyType: signupData.companyType,
         address: signupData.address,
+        number: signupData.number,
+        complement: signupData.complement,
         city: signupData.city,
         state: signupData.state,
         zip_code: signupData.zipCode,
@@ -122,6 +124,8 @@ export default function LoginPage({ navigate }) {
     name: user?.name || '',
     phone: user?.phone || '',
     address: user?.address || '',
+    number: user?.number || '',
+    complement: user?.complement || '',
     city: user?.city || '',
     state: user?.state || '',
     zip_code: user?.zip_code || '',
@@ -233,6 +237,10 @@ export default function LoginPage({ navigate }) {
             </div>
             <input className="input-field" placeholder="Endereço" value={profileForm.address} onChange={e => setProfileForm(f => ({ ...f, address: e.target.value }))} />
             <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input-field" placeholder="Número" value={profileForm.number} onChange={e => setProfileForm(f => ({ ...f, number: e.target.value }))} style={{ flex: '0 0 100px' }} />
+              <input className="input-field" placeholder="Complemento" value={profileForm.complement} onChange={e => setProfileForm(f => ({ ...f, complement: e.target.value }))} style={{ flex: 1 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
               <input className="input-field" placeholder="Cidade" value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} style={{ flex: 1 }} />
               <input className="input-field" placeholder="Estado" value={profileForm.state} onChange={e => setProfileForm(f => ({ ...f, state: e.target.value.toUpperCase() }))} style={{ flex: '0 0 100px' }} />
             </div>
@@ -262,6 +270,8 @@ export default function LoginPage({ navigate }) {
                   email: profileForm.email,
                   phone: profileForm.phone,
                   address: profileForm.address,
+                  number: profileForm.number,
+                  complement: profileForm.complement,
                   city: profileForm.city,
                   state: profileForm.state,
                   zip_code: profileForm.zip_code,

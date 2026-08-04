@@ -336,9 +336,24 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
 
             <div>
               <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Endereço *</label>
-              <input className="input-field" placeholder="Rua, número, complemento"
+              <input className="input-field" placeholder="Rua"
                 value={formData.address} onChange={e => set('address', e.target.value)}
                 style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Número</label>
+                <input className="input-field" placeholder="123"
+                  value={formData.number} onChange={e => set('number', e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Complemento</label>
+                <input className="input-field" placeholder="Apto / Bloco"
+                  value={formData.complement} onChange={e => set('complement', e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
