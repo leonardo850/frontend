@@ -112,6 +112,46 @@ export default function LoginPage({ navigate }) {
   const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '' });
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdError, setPwdError] = useState('');
+  const [activeProfileTab, setActiveProfileTab] = useState('dados');
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+    city: user?.city || '',
+    state: user?.state || '',
+    zip_code: user?.zip_code || '',
+    gender: user?.gender || '',
+    email: user?.email || '',
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileCepLoading, setProfileCepLoading] = useState(false);
+
+  const buscarCepProfile = async (cep) => {
+    const cleaned = cep.replace(/\D/g, '');
+    if (cleaned.length !== 8) return;
+    setProfileCepLoading(true);
+    setProfileError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+      if (!res.ok) throw new Error('Falha na busca');
+      const data = await res.json();
+      if (data.erro) {
+        setProfileError('CEP não encontrado');
+        return;
+      }
+      setProfileForm(f => ({
+        ...f,
+        address: data.logradouro || f.address,
+        city: data.localidade || f.city,
+        state: data.uf || f.state,
+      }));
+    } catch {
+      setProfileError('Erro ao buscar o CEP');
+    } finally {
+      setProfileCepLoading(false);
+    }
+  };
 
   if (useNewSignup) {
     return <SignupSteps onComplete={handleSignupComplete} onCancel={() => setUseNewSignup(false)} defaultCompanyType="barbershop" />;
@@ -162,19 +202,82 @@ export default function LoginPage({ navigate }) {
           </div>
         </div>
 
-        {[
-          { icon: '📅', label: 'Meus Agendamentos', action: () => navigate('appointments') },
-          { icon: '⭐', label: 'Minhas Avaliações', action: () => {} },
-          { icon: '🎁', label: 'Meus Cupons', action: () => {} },
-          { icon: '🔔', label: 'Notificações', action: () => {} },
-        ].map((item, i) => (
-          <button key={i} onClick={item.action}
-            style={{ width: '100%', background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 8, textAlign: 'left' }}>
-            <span style={{ fontSize: 18 }}>{item.icon}</span>
-            <span style={{ flex: 1 }}>{item.label}</span>
-            <span style={{ color: 'var(--muted)' }}>›</span>
-          </button>
-        ))}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          {[
+            { id: 'dados', label: 'Meus dados' },
+            { id: 'agenda', label: 'Agendamentos' },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveProfileTab(tab.id)} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: `1px solid ${activeProfileTab === tab.id ? 'var(--gold)' : 'var(--border)'}`, background: activeProfileTab === tab.id ? 'var(--gold)' : 'var(--dark2)', color: activeProfileTab === tab.id ? '#0F0F0F' : 'var(--text)', fontWeight: 600, cursor: 'pointer' }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeProfileTab === 'dados' ? (
+          <div style={{ background: 'var(--dark3)', borderRadius: 12, padding: 16, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input className="input-field" placeholder="Nome" value={profileForm.name} onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))} />
+            <input className="input-field" placeholder="E-mail" value={profileForm.email} onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))} />
+            <input className="input-field" placeholder="Celular" value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
+            <div style={{ position: 'relative' }}>
+              <input className="input-field" placeholder="CEP" value={profileForm.zip_code} onChange={e => {
+                const next = e.target.value;
+                setProfileForm(f => ({ ...f, zip_code: next }));
+                if (next.replace(/\D/g, '').length === 8) buscarCepProfile(next);
+              }} style={{ flex: 1 }} />
+              {profileCepLoading && <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)' }}>Buscando...</div>}
+            </div>
+            <input className="input-field" placeholder="Endereço" value={profileForm.address} onChange={e => setProfileForm(f => ({ ...f, address: e.target.value }))} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input-field" placeholder="Cidade" value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} style={{ flex: 1 }} />
+              <input className="input-field" placeholder="Estado" value={profileForm.state} onChange={e => setProfileForm(f => ({ ...f, state: e.target.value.toUpperCase() }))} style={{ flex: '0 0 100px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['masculino', 'feminino'].map(g => (
+                <button key={g} type="button" onClick={() => setProfileForm(f => ({ ...f, gender: g }))}
+                  style={{ flex: 1, background: profileForm.gender === g ? 'var(--gold)' : 'var(--dark2)', border: `1px solid ${profileForm.gender === g ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: profileForm.gender === g ? '#0F0F0F' : 'var(--text)', fontWeight: 600 }}>
+                  {g === 'masculino' ? '👨 Masculino' : '👩 Feminino'}
+                </button>
+              ))}
+            </div>
+            {profileError && <div className="error-msg" style={{ margin: 0 }}>{profileError}</div>}
+            <button className="btn-primary" disabled={profileLoading} onClick={async () => {
+              setProfileError('');
+              setProfileLoading(true);
+              try {
+                const { data } = await authAPI.updateProfile({
+                  name: profileForm.name,
+                  email: profileForm.email,
+                  phone: profileForm.phone,
+                  address: profileForm.address,
+                  city: profileForm.city,
+                  state: profileForm.state,
+                  zip_code: profileForm.zip_code,
+                  gender: profileForm.gender,
+                });
+                const updatedUser = { ...user, ...data.user };
+                localStorage.setItem('lebux_user', JSON.stringify(updatedUser));
+                window.location.reload();
+              } catch (err) {
+                setProfileError(err.response?.data?.error || 'Erro ao atualizar dados');
+              }
+              setProfileLoading(false);
+            }}>{profileLoading ? 'SALVANDO...' : 'SALVAR DADOS'}</button>
+          </div>
+        ) : (
+          [
+            { icon: '📅', label: 'Meus Agendamentos', action: () => navigate('appointments') },
+            { icon: '⭐', label: 'Minhas Avaliações', action: () => {} },
+            { icon: '🎁', label: 'Meus Cupons', action: () => {} },
+            { icon: '🔔', label: 'Notificações', action: () => {} },
+          ].map((item, i) => (
+            <button key={i} onClick={item.action}
+              style={{ width: '100%', background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 8, textAlign: 'left' }}>
+              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ flex: 1 }}>{item.label}</span>
+              <span style={{ color: 'var(--muted)' }}>›</span>
+            </button>
+          ))
+        )}
 
         <button onClick={() => { setShowChangePwd(s => !s); setPwdError(''); }}
           style={{ width: '100%', background: 'var(--dark2)', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: 14, marginBottom: 8, textAlign: 'left' }}>

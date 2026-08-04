@@ -29,6 +29,7 @@ export const authAPI = {
   forgotPassword: (data) => api.post('/api/auth/forgot', data),
   resetPassword: (data) => api.post('/api/auth/reset', data),
   changePassword: (data) => api.patch('/api/auth/password', data),
+  updateProfile: (data) => api.patch('/api/auth/profile', data),
 };
 
 // Barbershops
