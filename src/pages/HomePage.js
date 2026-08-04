@@ -173,18 +173,25 @@ export default function HomePage({ navigate }) {
           <div className="logo-text">LE<span>BUX</span></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
-            <div style={{ fontSize: 16, fontWeight: 18, color: 'var(--text)', lineHeight: 1.4, minHeight: 24 }}>
+            <div style={{ fontSize: 16, color: 'var(--text)', lineHeight: 1.4, minHeight: 24, display: 'flex', alignItems: 'center', gap: 6 }}>
               {manualLocation ? (
-                <span style={{ cursor: 'pointer' }} onClick={() => setShowLocationInput(true)} title="Clique para alterar">{manualLocation} ✏️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{manualLocation}</span>
               ) : user?.address ? (
-                <span style={{ cursor: 'pointer' }} onClick={() => setShowLocationInput(true)} title="Clique para alterar">{user.address}{user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''} ✏️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{user.address}{user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''}</span>
               ) : (
-                <span style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</span>
+                <span style={{ flex: 1, minWidth: 0, cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</span>
               )}
+              <button onClick={() => setShowLocationInput(s => !s)} title="Alterar localização"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--gold)', padding: 4, flexShrink: 0 }}>🔍</button>
             </div>
           </div>
         </div>
-        <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {user?.name && (
+            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</span>
+          )}
+          <button className="back-btn" onClick={() => navigate('login')} title="Perfil">👤</button>
+        </div>
       </div>
 
       {/* Location Input */}
