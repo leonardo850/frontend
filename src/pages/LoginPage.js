@@ -11,6 +11,7 @@ export default function LoginPage({ navigate }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', zipCode: '', gender: '', address: '', city: '', state: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cepLoading, setCepLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [emailValid, setEmailValid] = useState(null);
   const [pwdStrength, setPwdStrength] = useState('');
@@ -18,6 +19,32 @@ export default function LoginPage({ navigate }) {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2600); };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const buscarCep = async (cep) => {
+    const cleaned = cep.replace(/\D/g, '');
+    if (cleaned.length !== 8) return;
+    setCepLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+      if (!res.ok) throw new Error('Falha na busca');
+      const data = await res.json();
+      if (data.erro) {
+        setError('CEP não encontrado');
+        return;
+      }
+      setForm(f => ({
+        ...f,
+        address: data.logradouro || f.address,
+        city: data.localidade || f.city,
+        state: data.uf || f.state,
+      }));
+    } catch {
+      setError('Erro ao buscar o CEP');
+    } finally {
+      setCepLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setError(''); setLoading(true);
@@ -265,8 +292,11 @@ export default function LoginPage({ navigate }) {
         )}
         {tab === 'register' && (
           <>
-            <input className="input-field" placeholder="CEP" value={form.zipCode}
-              onChange={e => set('zipCode', e.target.value)} />
+            <div style={{ position: 'relative' }}>
+              <input className="input-field" placeholder="CEP" maxLength={9} value={form.zipCode}
+                onChange={e => { set('zipCode', e.target.value); if (e.target.value.replace(/\D/g, '').length === 8) buscarCep(e.target.value); }} />
+              {cepLoading && <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)' }}>Buscando...</div>}
+            </div>
             <input className="input-field" placeholder="Endereço" value={form.address}
               onChange={e => set('address', e.target.value)} />
             <div style={{ display: 'flex', gap: 8 }}>

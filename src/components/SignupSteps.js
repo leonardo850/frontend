@@ -39,6 +39,32 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
     setError('');
   };
 
+  const buscarCep = async (cep) => {
+    const cleaned = cep.replace(/\D/g, '');
+    if (cleaned.length !== 8) return;
+    setCepLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+      if (!res.ok) throw new Error('Falha na busca');
+      const data = await res.json();
+      if (data.erro) {
+        setError('CEP não encontrado');
+        return;
+      }
+      setFormData(f => ({
+        ...f,
+        address: data.logradouro || f.address,
+        city: data.localidade || f.city,
+        state: data.uf || f.state,
+      }));
+    } catch {
+      setError('Erro ao buscar o CEP');
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   const handleRemoveService = (index) => {
     setFormData(f => ({
       ...f,
@@ -256,6 +282,20 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
             )}
 
             <div>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CEP *</label>
+              <div style={{ position: 'relative' }}>
+                <input className="input-field" placeholder="Digite o CEP para preencher o endereço" maxLength="9"
+                  value={formData.zipCode} onChange={e => {
+                    const v = e.target.value;
+                    set('zipCode', v);
+                    if (v.replace(/\D/g, '').length === 8) buscarCep(v);
+                  }}
+                  style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
+                {cepLoading && <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--muted)' }}>Buscando...</div>}
+              </div>
+            </div>
+
+            <div>
               <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Endereço *</label>
               <input className="input-field" placeholder="Rua, número, complemento"
                 value={formData.address} onChange={e => set('address', e.target.value)}
@@ -275,13 +315,6 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
                   value={formData.state} onChange={e => set('state', e.target.value.toUpperCase())}
                   style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
               </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>CEP *</label>
-              <input className="input-field" placeholder="12345-678"
-                value={formData.zipCode} onChange={e => set('zipCode', e.target.value)}
-                style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />
             </div>
           </div>
         )}
