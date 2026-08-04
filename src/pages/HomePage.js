@@ -82,8 +82,8 @@ export default function HomePage({ navigate }) {
 
   // Auto-carregar endereço do usuário logado (só para exibição)
   useEffect(() => {
-    if (!user?.address || !user?.city) return;
-    const fullAddress = `${user.address}, ${user.city}${user.state ? ` - ${user.state}` : ''}`;
+    const fullAddress = [user?.address, user?.city, user?.state].filter(Boolean).join(', ');
+    if (!fullAddress) return;
     setManualLocation(fullAddress);
     setLocationText(fullAddress);
     setLocationApplied(false);
@@ -213,7 +213,7 @@ export default function HomePage({ navigate }) {
         <div style={{ position: 'relative', flex: 1 }}>
           <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔍</span>
           <input className="input-field" style={{ paddingLeft: 40, minHeight: 52, fontSize: 16 }}
-            placeholder="Buscar barbearias..." value={search}
+            placeholder="Buscar estabelecimentos ou profissionais..." value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()} />
         </div>
@@ -264,7 +264,7 @@ export default function HomePage({ navigate }) {
         )}
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">{locationApplied ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
+            <div className="section-title">{locationApplied ? 'Estabelecimentos e profissionais próximos' : 'Estabelecimentos e profissionais disponíveis'}</div>
             {manualLocation && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>📍 {manualLocation}</div>}
           </div>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>
@@ -273,7 +273,7 @@ export default function HomePage({ navigate }) {
         {filteredShops.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💈</div>
-            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>Nenhuma barbearia encontrada</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>Nenhum estabelecimento encontrado</div>
             <div style={{ fontSize: 13, marginBottom: 16 }}>Tente buscar por outro termo ou defina sua localização</div>
           </div>
         ) : (

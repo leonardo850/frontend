@@ -1,9 +1,14 @@
 export default function ShopCard({ shop, onClick, favorited = false, onToggleFavorite }) {
-  const initials = shop.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const safeName = shop?.name || 'Estabelecimento';
+  const initials = safeName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const colors = ['#4A90E2', '#2F80ED', '#56CCF2', '#9B59B6', '#27AE60'];
-  const color = colors[shop.name.charCodeAt(0) % colors.length];
+  const color = colors[safeName.charCodeAt(0) % colors.length];
   const minPrice = shop.services?.length ? Math.min(...shop.services.map(s => s.price)) : null;
   const serviceCount = shop.services?.length || 0;
+  const displayName = shop.display_name || shop.name;
+  const offerServices = Boolean(shop.service_provider || serviceCount > 0);
+  const providerLabel = offerServices ? 'Oferece serviços' : 'Estabelecimento';
+  const accentColor = offerServices ? 'var(--gold)' : 'var(--muted)';
 
   return (
     <div className="card" onClick={onClick}
@@ -47,24 +52,27 @@ export default function ShopCard({ shop, onClick, favorited = false, onToggleFav
         {initials}
       </div>
       <div style={{ flex: 1, minWidth: 0, paddingRight: 30 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <div style={{ fontSize: 16, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
-            {shop.name}
+            {displayName}
           </div>
           <span className={shop.is_open === true ? 'badge-open' : 'badge-closed'}>
             {shop.is_open === true ? 'Aberto' : shop.is_open === false ? 'Fechado' : '—'}
           </span>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           📍 {shop.address}{shop.city ? `, ${shop.city}` : ''}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: accentColor, background: offerServices ? 'rgba(245,197,24,0.12)' : 'rgba(255,255,255,0.06)', padding: '4px 8px', borderRadius: 999, fontWeight: 700 }}>
+            {providerLabel}
+          </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="stars" style={{ color: '#F5C518' }}>★</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>{shop.rating}</span>
             <span style={{ fontSize: 11, color: 'var(--muted)' }}>({shop.total_reviews})</span>
           </div>
-          {serviceCount > 0 && (
+          {offerServices && serviceCount > 0 && (
             <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--dark3)', padding: '2px 8px', borderRadius: 6 }}>
               {serviceCount} {serviceCount === 1 ? 'serviço' : 'serviços'}
             </span>
@@ -76,7 +84,7 @@ export default function ShopCard({ shop, onClick, favorited = false, onToggleFav
           )}
         </div>
         {minPrice && (
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
             A partir de <span style={{ color: 'var(--gold)', fontWeight: 600 }}>R$ {minPrice.toFixed(2)}</span>
           </div>
         )}
