@@ -148,18 +148,26 @@ export default function HomePage({ navigate }) {
       <div style={{ padding: '5px 5px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 50, flex: 1, minWidth: 0 }}>
           <div className="logo-text">LE<span>BUX</span></div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Sua localização</div>
-            <div style={{ fontSize: 16, color: 'var(--text)', lineHeight: 1.4, minHeight: 24, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {manualLocation ? (
-                <span style={{ flex: 1, minWidth: 0 }}>{manualLocation}</span>
-              ) : user?.address ? (
-                <span style={{ flex: 1, minWidth: 0 }}>{user.address}{user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''}</span>
-              ) : (
-                <span style={{ flex: 1, minWidth: 0, cursor: 'pointer', opacity: 0.6 }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</span>
-              )}
+          <div style={{ flex: 1, minWidth: 0, background: 'var(--dark3)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>📍</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>Sua localização</div>
+                {locationApplied && manualLocation ? (
+                  <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>{manualLocation}</div>
+                ) : user?.address ? (
+                  <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600, lineHeight: 1.3 }}>
+                    {user.address}
+                    <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 13 }}>
+                      {user.city ? `, ${user.city}` : ''}{user.state ? ` - ${user.state}` : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, color: 'var(--muted)', cursor: 'pointer' }} onClick={() => setShowLocationInput(true)}>Toque para definir localização</div>
+                )}
+              </div>
               <button onClick={() => setShowLocationInput(s => !s)} title="Alterar localização"
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--gold)', padding: 4, flexShrink: 0 }}>🔍</button>
+                style={{ background: 'var(--dark)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--gold)', padding: '8px 10px', flexShrink: 0 }}>🔍</button>
             </div>
           </div>
         </div>
