@@ -3,7 +3,6 @@ import { useAuth } from '../hooks/useAuth';
 import { getFavoriteIds, toggleFavorite } from '../lib/favorites';
 import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
-import { useGeolocation } from '../hooks/useGeolocation';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
 const DEMO = [
@@ -23,11 +22,11 @@ export default function HomePage({ navigate }) {
   const [category, setCategory] = useState('todos');
   const [toast, setToast] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
+  const [locationApplied, setLocationApplied] = useState(false);
   const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
   const mountedRef = useRef(true);
   const abortRef = useRef(null);
   const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions();
-  const { location: deviceLocation } = useGeolocation();
 
   const showToast = (msg) => {
     setToast(msg);
@@ -81,19 +80,14 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  // Auto-carregar endereço do usuário logado
+  // Auto-carregar endereço do usuário logado (só para exibição)
   useEffect(() => {
     if (!user?.address || !user?.city) return;
     const fullAddress = `${user.address}, ${user.city}${user.state ? ` - ${user.state}` : ''}`;
     setManualLocation(fullAddress);
     setLocationText(fullAddress);
-    (async () => {
-      const c = await geocodeAddress(fullAddress);
-      if (mountedRef.current) {
-        setLocationCoords(c);
-        fetchFromAPI('', fullAddress, c);
-      }
-    })();
+    setLocationApplied(false);
+    fetchFromAPI('', '', null);
   }, [user?.id]);
 
   useEffect(() => {
@@ -106,42 +100,25 @@ export default function HomePage({ navigate }) {
   }, []);
 
   useEffect(() => {
-    if (!deviceLocation) return;
-    setLocationCoords(deviceLocation);
-    fetchFromAPI(search, manualLocation, deviceLocation);
-    (async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${deviceLocation.lat}&lon=${deviceLocation.lng}`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (mountedRef.current && json?.display_name) {
-          setManualLocation(json.display_name);
-          setLocationText(json.display_name);
-        }
-      } catch {}
-    })();
-  }, [deviceLocation]);
-
-  useEffect(() => {
     setFavShops(getFavoriteIds('shop', user?.id));
   }, [user]);
 
   const handleApplyLocation = async () => {
     const v = locationText.trim();
     setManualLocation(v);
-    if (v) { const c = await geocodeAddress(v); setLocationCoords(c); fetchFromAPI(search, v, c); }
-    else { setLocationCoords(null); fetchFromAPI(search, '', null); }
+    if (v) { const c = await geocodeAddress(v); setLocationCoords(c); setLocationApplied(true); fetchFromAPI('', v, c); }
+    else { setLocationCoords(null); setLocationApplied(false); fetchFromAPI('', '', null); }
     setShowLocationInput(false);
     showToast(v ? 'Local aplicado' : 'Limpo');
   };
 
   const handleClearLocation = () => {
-    setLocationText(''); setManualLocation(''); setLocationCoords(null);
-    setShowLocationInput(false); fetchFromAPI(search, '', null);
+    setLocationText(''); setManualLocation(''); setLocationCoords(null); setLocationApplied(false);
+    setShowLocationInput(false); fetchFromAPI('', '', null);
     showToast('Localização limpa');
   };
 
-  const handleSearch = () => fetchFromAPI(search, manualLocation, locationCoords);
+  const handleSearch = () => fetchFromAPI(search, '', locationApplied ? locationCoords : null);
 
   const handleToggleShopFavorite = (shop) => {
     const next = toggleFavorite('shop', user?.id, shop.id);
@@ -195,7 +172,7 @@ export default function HomePage({ navigate }) {
       </div>
 
       {/* Location Input */}
-      {(showLocationInput || !manualLocation) && (
+      {showLocationInput && (
         <div style={{ margin: '16px 20px 0', position: 'relative' }}>
           <input className="input-field" placeholder="Digite sua cidade, bairro ou endereço"
             value={locationText} onChange={e => { setLocationText(e.target.value); scheduleAddressSuggestions(e.target.value); }}
@@ -208,7 +185,7 @@ export default function HomePage({ navigate }) {
                 <button key={i} onClick={async () => {
                   setLocationText(s.label); setShowSuggestions(false);
                   const c = await geocodeAddress(s.label);
-                  setManualLocation(s.label); setLocationCoords(c); fetchFromAPI(search, s.label, c);
+                  setManualLocation(s.label); setLocationCoords(c); setLocationApplied(true); fetchFromAPI('', s.label, c);
                   showToast('Local aplicado');
                 }} style={{ display: 'block', width: '100%', padding: '14px 16px', background: 'transparent', border: 'none', color: 'var(--text)', textAlign: 'left', cursor: 'pointer', fontSize: 14, borderBottom: '1px solid var(--border)' }}>
                   <span>{s.label}</span>
@@ -268,7 +245,7 @@ export default function HomePage({ navigate }) {
               {' '}Exibindo dados locais.
             </span>
             <button className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }}
-              onClick={() => fetchFromAPI(search, manualLocation, locationCoords)}>Tentar</button>
+              onClick={() => fetchFromAPI(search, locationApplied ? manualLocation : '', locationApplied ? locationCoords : null)}>Tentar</button>
           </div>
         )}
         {apiStatus === 'carregando' && (
@@ -279,7 +256,7 @@ export default function HomePage({ navigate }) {
         )}
         <div style={{ padding: '0 20px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div className="section-title">{(manualLocation || user?.address) ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
+            <div className="section-title">{locationApplied ? 'Barbearias próximas' : 'Barbearias disponíveis'}</div>
             {manualLocation && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>📍 {manualLocation}</div>}
           </div>
           <span style={{ fontSize: 13, color: 'var(--muted)' }}>{filteredShops.length} {filteredShops.length === 1 ? 'encontrada' : 'encontradas'}</span>

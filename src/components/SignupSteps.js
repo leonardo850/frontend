@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { validateEmail, validatePassword, PASSWORD_HINTS } from '../utils/authValidation';
 
+const STANDARD_SERVICES = [
+  { id: 'corte_clasico', name: 'Corte Clássico', price: 30, duration: 30, category: 'corte' },
+  { id: 'corte_moderno', name: 'Corte Moderno', price: 35, duration: 30, category: 'corte' },
+  { id: 'corte_degrade', name: 'Corte Degradê', price: 35, duration: 35, category: 'corte' },
+  { id: 'corte_feminino', name: 'Corte Feminino', price: 40, duration: 40, category: 'corte_feminino' },
+  { id: 'barba_completa', name: 'Barba Completa', price: 25, duration: 25, category: 'barba' },
+  { id: 'barba_tradicional', name: 'Barba Tradicional', price: 22, duration: 25, category: 'barba' },
+  { id: 'sobrancelha', name: 'Sobrancelha', price: 15, duration: 15, category: 'sobrancelha' },
+  { id: 'pigmentacao', name: 'Pigmentação', price: 70, duration: 60, category: 'pigmento' },
+  { id: 'combo', name: 'Corte + Barba', price: 50, duration: 50, category: 'combo' },
+];
+
 export default function SignupSteps({ onComplete, onCancel, defaultCompanyType = '' }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -18,25 +30,27 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
     complement: '',
     city: '',
     state: '',
+    offerServices: null, // null | true | false
     services: [],
   });
   const [error, setError] = useState('');
-  const [serviceForm, setServiceForm] = useState({ name: '', price: '' });
   const [cepLoading, setCepLoading] = useState(false);
 
   const set = (k, v) => setFormData(f => ({ ...f, [k]: v }));
 
-  const handleAddService = () => {
-    if (!serviceForm.name || !serviceForm.price) {
-      setError('Preencha nome e preço do serviço');
-      return;
-    }
+  const toggleStandardService = (svc) => {
+    setFormData(f => {
+      const exists = f.services.find(s => s.name === svc.name);
+      if (exists) return { ...f, services: f.services.filter(s => s.name !== svc.name) };
+      return { ...f, services: [...f.services, { name: svc.name, price: svc.price, duration_minutes: svc.duration, category: svc.category, description: '' }] };
+    });
+  };
+
+  const updateServiceField = (name, field, value) => {
     setFormData(f => ({
       ...f,
-      services: [...f.services, { ...serviceForm, price: parseFloat(serviceForm.price) }],
+      services: f.services.map(s => s.name === name ? { ...s, [field]: field === 'price' ? (parseFloat(value) || 0) : value } : s),
     }));
-    setServiceForm({ name: '', price: '' });
-    setError('');
   };
 
   const buscarCep = async (cep) => {
@@ -63,13 +77,6 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
     } finally {
       setCepLoading(false);
     }
-  };
-
-  const handleRemoveService = (index) => {
-    setFormData(f => ({
-      ...f,
-      services: f.services.filter((_, i) => i !== index),
-    }));
   };
 
   const handleNextStep = () => {
@@ -129,13 +136,21 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
           setError('CNPJ deve ter 14 dígitos');
           return;
         }
-        setStep(4);
+        if (formData.offerServices === null || typeof formData.offerServices !== 'boolean') {
+          setError('Selecione se deseja oferecer serviços');
+          return;
+        }
+        if (formData.offerServices) {
+          setStep(4);
+        } else {
+          onComplete(formData);
+        }
       } else {
         onComplete(formData);
       }
     } else if (step === 4) {
       if (formData.services.length === 0) {
-        setError('Adicione pelo menos um serviço');
+        setError('Selecione pelo menos um serviço');
         return;
       }
       onComplete(formData);
@@ -160,6 +175,10 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
     return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(8, 12)}-${cleaned.slice(12, 14)}`;
   };
 
+  const isCompanyFlow = formData.companyType && formData.companyType !== 'none';
+  const totalSteps = isCompanyFlow ? (formData.offerServices === true ? 4 : 3) : 3;
+  const finalStep = totalSteps;
+
   return (
     <div style={{ background: 'var(--dark)', minHeight: '100vh', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'var(--dark2)', borderRadius: 16, border: '1px solid var(--border)', padding: '24px', maxWidth: 500, width: '100%' }}>
@@ -167,7 +186,7 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <div className="logo-text" style={{ fontSize: 20, marginBottom: 8 }}>LE<span>BUX</span></div>
-          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Cadastro - Etapa {step} de {formData.companyType === 'none' ? 3 : 4}</div>
+          <div style={{ fontSize: 14, color: 'var(--muted)' }}>Cadastro - Etapa {step} de {totalSteps}</div>
         </div>
 
         {/* Progress Bar */}
@@ -175,7 +194,7 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
           <div style={{
             height: '100%',
             background: 'var(--gold)',
-            width: `${formData.companyType === 'none' ? (step / 3) * 100 : (step / 4) * 100}%`,
+            width: `${(step / totalSteps) * 100}%`,
             transition: '0.3s'
           }} />
         </div>
@@ -267,6 +286,22 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
               </div>
             )}
 
+            {formData.companyType !== 'none' && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Deseja oferecer serviços? *</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => set('offerServices', true)}
+                    style={{ flex: 1, background: formData.offerServices === true ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${formData.offerServices === true ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: formData.offerServices === true ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                    ✅ Sim
+                  </button>
+                  <button type="button" onClick={() => set('offerServices', false)}
+                    style={{ flex: 1, background: formData.offerServices === false ? 'var(--gold)' : 'var(--dark3)', border: `1px solid ${formData.offerServices === false ? 'var(--gold)' : 'var(--border)'}`, borderRadius: 10, padding: '12px', cursor: 'pointer', color: formData.offerServices === false ? 'var(--dark)' : 'var(--text)', fontWeight: 600, fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>
+                    ❌ Não
+                  </button>
+                </div>
+              </div>
+            )}
+
             {formData.companyType === 'none' && (
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Sexo *</label>
@@ -323,45 +358,45 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
         {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, fontWeight: 600 }}>Serviços Prestados</h3>
-            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, marginBottom: 8 }}>Adicione pelo menos um serviço</p>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, marginBottom: 8 }}>Selecione pelo menos um serviço padrão. Use a observação para descrever cada serviço.</p>
 
-            {/* Serviços adicionados */}
-            {formData.services.length > 0 && (
-              <div style={{ background: 'var(--dark3)', borderRadius: 8, padding: 12, marginBottom: 8 }}>
-                {formData.services.map((svc, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < formData.services.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                    <div style={{ fontSize: 13 }}>
-                      <div style={{ fontWeight: 500 }}>{svc.name}</div>
-                      <div style={{ color: 'var(--gold)', fontSize: 12 }}>R$ {svc.price.toFixed(2)}</div>
+            {STANDARD_SERVICES.map(svc => {
+              const selected = formData.services.find(s => s.name === svc.name);
+              return (
+                <div key={svc.id} style={{
+                  background: 'var(--dark3)',
+                  borderRadius: 8,
+                  padding: 12,
+                  border: selected ? '1px solid var(--gold)' : '1px solid transparent',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}>
+                  <button type="button" onClick={() => toggleStandardService(svc)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif' }}>
+                    <input type="checkbox" readOnly checked={!!selected} style={{ accentColor: 'var(--gold)', width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ flex: 1, fontWeight: 500, fontSize: 14 }}>{svc.name}</span>
+                    <span style={{ color: 'var(--gold)', fontSize: 13 }}>R$ {svc.price.toFixed(2)}</span>
+                  </button>
+                  {selected && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Observação (descrição do serviço)</label>
+                        <textarea className="input-field" placeholder="Descreva o que inclui este serviço..."
+                          value={selected.description || ''} onChange={e => updateServiceField(svc.name, 'description', e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 60 }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Valor (R$)</label>
+                        <input className="input-field" type="number" step="0.01"
+                          value={selected.price} onChange={e => updateServiceField(svc.name, 'price', e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
+                      </div>
                     </div>
-                    <button onClick={() => handleRemoveService(i)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 16 }}>✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Adicionar novo serviço */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--dark3)', borderRadius: 8, padding: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Serviço</label>
-                <input className="input-field" placeholder="Ex: Corte de Cabelo"
-                  value={serviceForm.name} onChange={e => setServiceForm(f => ({ ...f, name: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Valor (R$)</label>
-                  <input className="input-field" placeholder="40,00" type="number" step="0.01"
-                    value={serviceForm.price} onChange={e => setServiceForm(f => ({ ...f, price: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
+                  )}
                 </div>
-                <button onClick={handleAddService}
-                  style={{ background: 'var(--gold)', border: 'none', borderRadius: 6, padding: '10px 16px', color: '#0F0F0F', fontWeight: 600, cursor: 'pointer', fontSize: 12, alignSelf: 'flex-end', marginTop: 20 }}>
-                  Adicionar
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
         )}
 
