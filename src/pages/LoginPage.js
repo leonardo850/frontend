@@ -279,7 +279,9 @@ export default function LoginPage({ navigate }) {
                 localStorage.setItem('lebux_user', JSON.stringify(updatedUser));
                 window.location.reload();
               } catch (err) {
-                setProfileError(err.response?.data?.error || 'Erro ao atualizar dados');
+                const message = err?.response?.data?.error || err?.message || 'Erro ao atualizar dados';
+                setProfileError(message);
+                console.error('Erro ao atualizar perfil:', err);
               }
               setProfileLoading(false);
             }}>{profileLoading ? 'SALVANDO...' : 'SALVAR DADOS'}</button>
