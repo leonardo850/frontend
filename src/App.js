@@ -31,6 +31,7 @@ export default function App() {
   const location = useLocation();
   const [resetToken, setResetToken] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('lebux_theme') || 'dark');
+  const isAutoPinkTheme = !isCompany && user?.gender === 'feminino';
 
   const navigate = (to, data = {}) => {
     const state = {
@@ -65,25 +66,34 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('theme-light', theme === 'light');
+    document.documentElement.classList.toggle('theme-pink', theme === 'pink');
     localStorage.setItem('lebux_theme', theme);
   }, [theme]);
 
-  // Tema rosa para usuárias (pessoa física, não empresa)
   useEffect(() => {
-    const isPink = !isCompany && user?.gender === 'feminino';
-    document.documentElement.classList.toggle('theme-pink', isPink);
-  }, [user, isCompany]);
+    if (isAutoPinkTheme) {
+      setTheme('pink');
+      return;
+    }
+    if (!['light', 'pink'].includes(theme)) {
+      setTheme('dark');
+    }
+  }, [isAutoPinkTheme]);
 
   const toggleTheme = () => {
-    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+    setTheme((current) => {
+      if (current === 'dark') return 'light';
+      if (current === 'light') return 'pink';
+      return 'dark';
+    });
   };
 
   return (
     <div className="app-shell">
-      <button className="theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}>
+      <button className="theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Mudar para tema claro' : theme === 'light' ? 'Mudar para tema rosa' : 'Voltar ao tema escuro'}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
-          <span style={{ fontSize: 12, fontWeight: 700 }}>{theme === 'dark' ? 'Claro' : 'Escuro'}</span>
+          <span>{theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🌸'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700 }}>{theme === 'dark' ? 'Escuro' : theme === 'light' ? 'Claro' : 'Rosa'}</span>
         </span>
       </button>
       <Routes>

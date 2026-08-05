@@ -44,12 +44,19 @@ export default function BarbershopPage({ shop, navigate }) {
       .catch(() => {});
   }, [fullShop?.id, navigate]);
 
-  const services = fullShop?.services || [
+  const services = (fullShop?.services || [
     { id: 's1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte', icon: '✂️' },
     { id: 's2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba', icon: '🪒' },
     { id: 's3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo', icon: '💈' },
     { id: 's4', name: 'Pigmentação', price: 70, duration_minutes: 60, category: 'pigmento', icon: '🎨' },
-  ];
+  ]).reduce((acc, svc) => {
+    const key = `${String(svc.name || '').trim().toLowerCase()}::${Number(svc.price || 0)}`;
+    if (!acc.seen.has(key)) {
+      acc.seen.add(key);
+      acc.list.push(svc);
+    }
+    return acc;
+  }, { seen: new Set(), list: [] }).list;
 
   const svcIcons = { corte: '✂️', barba: '🪒', combo: '💈', pigmento: '🎨', sobrancelha: '👁️', tratamento: '🧴' };
   const initials = fullShop?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
