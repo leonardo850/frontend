@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+  timeout: 20000,
 });
 
 api.interceptors.request.use(config => {
@@ -29,7 +30,7 @@ export const authAPI = {
   forgotPassword: (data) => api.post('/api/auth/forgot', data),
   resetPassword: (data) => api.post('/api/auth/reset', data),
   changePassword: (data) => api.patch('/api/auth/password', data),
-  updateProfile: (data) => api.patch('/api/auth/profile', data),
+  updateProfile: (data) => api.patch(`${api.defaults.baseURL.replace(/\/$/, '')}/api/auth/profile`, data),
 };
 
 // Barbershops

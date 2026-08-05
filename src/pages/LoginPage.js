@@ -5,7 +5,7 @@ import { validateEmail, validatePassword, passwordStrength, PASSWORD_HINTS } fro
 import SignupSteps from '../components/SignupSteps';
 
 export default function LoginPage({ navigate }) {
-  const { user, isCompany, login, register, logout } = useAuth();
+  const { user, isCompany, login, register, logout, updateProfile } = useAuth();
   const [tab, setTab] = useState('login');
   const [useNewSignup, setUseNewSignup] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '', zipCode: '', gender: '', address: '', number: '', complement: '', city: '', state: '' });
@@ -274,8 +274,8 @@ export default function LoginPage({ navigate }) {
                 if (profileForm.zip_code) payload.zip_code = profileForm.zip_code;
                 if (profileForm.gender) payload.gender = profileForm.gender;
 
-                const { data } = await authAPI.updateProfile(payload);
-                const updatedUser = { ...user, ...data.user };
+                const result = await updateProfile(payload);
+                const updatedUser = result?.user || { ...user, ...payload };
                 localStorage.setItem('lebux_user', JSON.stringify(updatedUser));
                 window.location.reload();
               } catch (err) {

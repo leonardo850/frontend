@@ -40,6 +40,17 @@ export function AuthProvider({ children }) {
     return { ...data, user: normalizedUser };
   }, []);
 
+  const updateProfile = useCallback(async (profileData) => {
+    try {
+      const { data } = await authAPI.updateProfile(profileData);
+      const nextUser = persistUser({ ...(user || {}), ...data.user });
+      return { ok: true, user: nextUser };
+    } catch (error) {
+      const fallbackUser = persistUser({ ...(user || {}), ...profileData });
+      return { ok: false, fallback: true, user: fallbackUser, error };
+    }
+  }, [user]);
+
   const logout = useCallback(() => {
     localStorage.removeItem('lebux_token');
     localStorage.removeItem('lebux_user');
@@ -48,7 +59,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isCompany: Boolean(user?.isCompany), login, register, logout }}>
+    <AuthContext.Provider value={{ user, isCompany: Boolean(user?.isCompany), login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
