@@ -61,7 +61,7 @@ export default function BarbershopPage({ shop, navigate }) {
       {/* Header */}
       <div style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button className="back-btn" onClick={() => navigate('home')}>←</button>
+          <button className="back-btn" onClick={() => navigate('home')} title="Voltar para a tela inicial">🏠</button>
           <span style={{ fontWeight: 600, fontSize: 16 }}>{fullShop?.name}</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

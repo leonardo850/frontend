@@ -74,7 +74,7 @@ export default function BookingPage({ shop, service, navigate }) {
       {toast && <div className="toast-msg">{toast}</div>}
 
       <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 14, borderBottom: '1px solid var(--border)' }}>
-        <button className="back-btn" onClick={() => navigate('barbershop', { shop: activeShop })}>←</button>
+        <button className="back-btn" onClick={() => navigate('home')} title="Voltar para a tela inicial">🏠</button>
         <span style={{ fontWeight: 600, fontSize: 16 }}>Escolher Horário</span>
       </div>
 

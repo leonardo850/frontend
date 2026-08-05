@@ -33,7 +33,7 @@ export default function ShopDayView({ navigate, shopId: propShopId, date: propDa
     <div className="page">
       <div style={{ padding: 20, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 20, fontWeight: 700 }}>Agenda do dia</div>
-        <button className="back-btn" onClick={() => navigate('company')}>←</button>
+        <button className="back-btn" onClick={() => navigate('home')} title="Voltar para a tela inicial">🏠</button>
       </div>
 
       <div style={{ padding: 20 }}>

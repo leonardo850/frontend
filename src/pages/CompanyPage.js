@@ -300,6 +300,7 @@ export default function CompanyPage({ navigate }) {
           <button className="btn-outline" onClick={toggleCompanyFab} title={companyFabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}>
             {companyFabHidden ? 'Mostrar atalho' : 'Ocultar atalho'}
           </button>
+          <button className="back-btn" onClick={() => navigate('home')} title="Voltar para a tela inicial">🏠</button>
           <button className="back-btn" onClick={() => logout() || navigate('login')} title="Sair">🚪</button>
         </div>
       </div>
