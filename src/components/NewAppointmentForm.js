@@ -61,10 +61,14 @@ export default function NewAppointmentForm({
           {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <select className="input-field" style={{ padding: '12px 14px', fontSize: 14 }}
-          value={newAppt.service_id} onChange={e => setNewAppt(prev => ({ ...prev, service_id: e.target.value }))}>
-          <option value="">Serviço</option>
+          value={newAppt.service_id} onChange={e => setNewAppt(prev => ({ ...prev, service_id: e.target.value }))}
+          disabled={!services.length}>
+          <option value="">{services.length ? 'Serviço' : 'Nenhum serviço cadastrado'}</option>
           {services.map(s => <option key={s.id} value={s.id}>{s.name} — R${s.price}</option>)}
         </select>
+        {!services.length && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -4 }}>Cadastre serviços para esta barbearia antes de criar agendamentos.</div>
+        )}
         <input className="input-field" placeholder="Observações (opcional)" value={newAppt.notes}
           onChange={e => setNewAppt(prev => ({ ...prev, notes: e.target.value }))}
           style={{ width: '100%', padding: '12px 14px', fontSize: 14 }} />

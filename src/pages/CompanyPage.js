@@ -95,16 +95,6 @@ export default function CompanyPage({ navigate }) {
 
   const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  const DEFAULT_SERVICES = [
-    { id: 'cabelo', name: 'Cabelo', price: 40, duration_minutes: 30, category: 'corte' },
-    { id: 'cabelo-barba', name: 'Cabelo e Barba', price: 60, duration_minutes: 45, category: 'combo' },
-    { id: 'barba', name: 'Barba', price: 30, duration_minutes: 25, category: 'barba' },
-    { id: 'corte-infantil', name: 'Corte Infantil', price: 35, duration_minutes: 30, category: 'corte' },
-    { id: 'design-sobrancelha', name: 'Design de Sobrancelha', price: 25, duration_minutes: 20, category: 'sobrancelha' },
-    { id: 'limpeza-rosto', name: 'Limpeza de Rosto', price: 50, duration_minutes: 40, category: 'tratamento' },
-    { id: 'coloracao', name: 'Coloração', price: 70, duration_minutes: 60, category: 'tratamento' },
-  ];
-
   const getDefaultHours = () => DAY_NAMES.map((_, index) => ({
     day_of_week: index,
     is_open: index < 5,
@@ -123,17 +113,18 @@ export default function CompanyPage({ navigate }) {
   const handleSlotClick = (date, time) => {
     setSelectedAppt(null);
     setShowCreateForm(true);
+    const shopId = filterShopId || '';
     setNewAppt(prev => ({
       ...prev,
       date,
       start_time: time,
-      barbershop_id: filterShopId || '',
+      barbershop_id: shopId,
       service_id: '',
       user_id: '',
       client_search: '',
       notes: '',
     }));
-    setServices(DEFAULT_SERVICES);
+    loadShopServices(shopId);
   };
 
   const handleFilterShopChange = (shopId) => {
@@ -231,14 +222,18 @@ export default function CompanyPage({ navigate }) {
     setClientResults([]);
   };
 
-  const handleShopChange = async (shopId) => {
-    setNewAppt(prev => ({ ...prev, barbershop_id: shopId, service_id: '' }));
-    if (!shopId) { setServices(DEFAULT_SERVICES); setApptHours([]); return; }
+  const loadShopServices = async (shopId) => {
+    if (!shopId) { setServices([]); setApptHours([]); return; }
     fetchApptHours(shopId);
     try {
       const { data: shopData } = await api.get(`/api/barbershops/${shopId}`);
-      setServices(shopData?.services?.length ? shopData.services : DEFAULT_SERVICES);
-    } catch { setServices(DEFAULT_SERVICES); }
+      setServices(shopData?.services?.length ? shopData.services : []);
+    } catch { setServices([]); }
+  };
+
+  const handleShopChange = (shopId) => {
+    setNewAppt(prev => ({ ...prev, barbershop_id: shopId, service_id: '' }));
+    loadShopServices(shopId);
   };
 
   const handleCreateAppointment = async () => {

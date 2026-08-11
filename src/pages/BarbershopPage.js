@@ -44,12 +44,7 @@ export default function BarbershopPage({ shop, navigate }) {
       .catch(() => {});
   }, [fullShop?.id, navigate]);
 
-  const services = (fullShop?.services || [
-    { id: 's1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte', icon: '✂️' },
-    { id: 's2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba', icon: '🪒' },
-    { id: 's3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo', icon: '💈' },
-    { id: 's4', name: 'Pigmentação', price: 70, duration_minutes: 60, category: 'pigmento', icon: '🎨' },
-  ]).reduce((acc, svc) => {
+  const services = (fullShop?.services || []).reduce((acc, svc) => {
     const key = `${String(svc.name || '').trim().toLowerCase()}::${Number(svc.price || 0)}`;
     if (!acc.seen.has(key)) {
       acc.seen.add(key);
@@ -108,6 +103,11 @@ export default function BarbershopPage({ shop, navigate }) {
 
         {/* Services */}
         <div className="section-title" style={{ marginBottom: 14 }}>Escolha o serviço</div>
+        {services.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px 16px', marginBottom: 20 }}>
+            Nenhum serviço disponível no momento
+          </div>
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           {services.map(svc => {
             const favorited = favServices.includes(svc.id);
@@ -139,6 +139,7 @@ export default function BarbershopPage({ shop, navigate }) {
             );
           })}
         </div>
+        )}
 
         <button className="btn-primary"
           disabled={!selectedService}
