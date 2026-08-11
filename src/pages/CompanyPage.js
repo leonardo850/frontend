@@ -96,13 +96,13 @@ export default function CompanyPage({ navigate }) {
   const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const DEFAULT_SERVICES = [
-    { id: 'cabelo', name: 'Cabelo', price: 40 },
-    { id: 'cabelo-barba', name: 'Cabelo e Barba', price: 60 },
-    { id: 'barba', name: 'Barba', price: 30 },
-    { id: 'corte-infantil', name: 'Corte Infantil', price: 35 },
-    { id: 'design-sobrancelha', name: 'Design de Sobrancelha', price: 25 },
-    { id: 'limpeza-rosto', name: 'Limpeza de Rosto', price: 50 },
-    { id: 'coloracao', name: 'Coloração', price: 70 },
+    { id: 'cabelo', name: 'Cabelo', price: 40, duration_minutes: 30, category: 'corte' },
+    { id: 'cabelo-barba', name: 'Cabelo e Barba', price: 60, duration_minutes: 45, category: 'combo' },
+    { id: 'barba', name: 'Barba', price: 30, duration_minutes: 25, category: 'barba' },
+    { id: 'corte-infantil', name: 'Corte Infantil', price: 35, duration_minutes: 30, category: 'corte' },
+    { id: 'design-sobrancelha', name: 'Design de Sobrancelha', price: 25, duration_minutes: 20, category: 'sobrancelha' },
+    { id: 'limpeza-rosto', name: 'Limpeza de Rosto', price: 50, duration_minutes: 40, category: 'tratamento' },
+    { id: 'coloracao', name: 'Coloração', price: 70, duration_minutes: 60, category: 'tratamento' },
   ];
 
   const getDefaultHours = () => DAY_NAMES.map((_, index) => ({

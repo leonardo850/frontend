@@ -136,8 +136,10 @@ export default function HomePage({ navigate }) {
     ...(isFemale ? [{ id: 'corte_feminino', label: 'Corte Feminino', icon: '💇‍♀️' }] : []),
     { id: 'corte', label: 'Corte', icon: '💈' },
     ...(isFemale ? [] : [{ id: 'barba', label: 'Barba', icon: '🪒' }]),
+    { id: 'combo', label: 'Combos', icon: '💼' },
     { id: 'pigmento', label: 'Pigmento', icon: '🎨' },
     { id: 'sobrancelha', label: 'Sobrancelha', icon: '👁️' },
+    { id: 'tratamento', label: 'Tratamento', icon: '🧴' },
   ];
 
   return (

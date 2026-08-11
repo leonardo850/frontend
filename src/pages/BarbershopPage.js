@@ -131,6 +131,9 @@ export default function BarbershopPage({ shop, navigate }) {
                   <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{svc.name}</div>
                   <div style={{ fontSize: 13, color: selectedService?.id === svc.id ? 'var(--gold)' : 'var(--muted)' }}>R$ {svc.price}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{svc.duration_minutes} min</div>
+                  {svc.description && (
+                    <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.4, opacity: 0.8 }}>{svc.description}</div>
+                  )}
                 </div>
               </div>
             );

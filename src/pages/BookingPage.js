@@ -134,11 +134,11 @@ export default function BookingPage({ shop, service, navigate }) {
         {selectedTime && (
           <div style={{ background: 'var(--dark3)', border: '1px solid var(--gold)', borderRadius: 12, padding: '14px', marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Resumo do agendamento</div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>{service?.name}</div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>{activeService?.name}</div>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              {shop?.name} · {new Date(selectedDate + 'T00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
+              {activeShop?.name} · {new Date(selectedDate + 'T00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
             </div>
-            <div style={{ marginTop: 6, fontWeight: 700, color: 'var(--gold)' }}>R$ {service?.price}</div>
+            <div style={{ marginTop: 6, fontWeight: 700, color: 'var(--gold)' }}>R$ {activeService?.price}</div>
           </div>
         )}
 

@@ -49,7 +49,12 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
   const updateServiceField = (name, field, value) => {
     setFormData(f => ({
       ...f,
-      services: f.services.map(s => s.name === name ? { ...s, [field]: field === 'price' ? (parseFloat(value) || 0) : value } : s),
+      services: f.services.map(s => {
+        if (s.name !== name) return s;
+        if (field === 'price') return { ...s, price: (parseFloat(value) || 0) };
+        if (field === 'duration_minutes') return { ...s, duration_minutes: (parseInt(value, 10) || 1) };
+        return { ...s, [field]: value };
+      }),
     }));
   };
 
@@ -377,7 +382,7 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
         {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, fontWeight: 600 }}>Serviços Prestados</h3>
-            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, marginBottom: 8 }}>Selecione pelo menos um serviço padrão. Use a observação para descrever cada serviço.</p>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, marginBottom: 8 }}>Selecione pelo menos um serviço padrão. Ajuste o valor e a duração de cada serviço e use a observação para descrevê-lo.</p>
 
             {STANDARD_SERVICES.map(svc => {
               const selected = formData.services.find(s => s.name === svc.name);
@@ -405,11 +410,19 @@ export default function SignupSteps({ onComplete, onCancel, defaultCompanyType =
                           value={selected.description || ''} onChange={e => updateServiceField(svc.name, 'description', e.target.value)}
                           style={{ width: '100%', padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 60 }} />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Valor (R$)</label>
-                        <input className="input-field" type="number" step="0.01"
-                          value={selected.price} onChange={e => updateServiceField(svc.name, 'price', e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Valor (R$)</label>
+                          <input className="input-field" type="number" step="0.01" min="0"
+                            value={selected.price} onChange={e => updateServiceField(svc.name, 'price', e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Duração (min)</label>
+                          <input className="input-field" type="number" step="5" min="1"
+                            value={selected.duration_minutes} onChange={e => updateServiceField(svc.name, 'duration_minutes', e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', fontSize: 13 }} />
+                        </div>
                       </div>
                     </div>
                   )}
