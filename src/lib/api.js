@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
-  timeout: 20000,
+  timeout: 30000,
 });
 
 api.interceptors.request.use(config => {

@@ -50,7 +50,7 @@ export default function HomePage({ navigate }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const params = {};
