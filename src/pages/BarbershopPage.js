@@ -53,6 +53,8 @@ export default function BarbershopPage({ shop, navigate }) {
     return acc;
   }, { seen: new Set(), list: [] }).list;
 
+  const isDemoMode = services.some(svc => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(svc.id || '')));
+
   const svcIcons = { corte: '✂️', barba: '🪒', combo: '💈', pigmento: '🎨', sobrancelha: '👁️', tratamento: '🧴' };
   const initials = fullShop?.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const colors = ['#C9A84C', '#27AE60', '#8B6914', '#4A90E2', '#9B59B6'];
@@ -141,10 +143,16 @@ export default function BarbershopPage({ shop, navigate }) {
         </div>
         )}
 
+        {isDemoMode && (
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 10, color: 'var(--red)', fontSize: 13 }}>
+            ⚠️ Modo demonstração (sem conexão com o servidor). Os serviços abaixo são apenas exemplos e não podem ser agendados. Volte e toque em "Tentar".
+          </div>
+        )}
+
         <button className="btn-primary"
-          disabled={!selectedService}
+          disabled={!selectedService || isDemoMode}
           onClick={() => navigate('booking', { shop: fullShop, service: selectedService })}>
-          {selectedService ? `AGENDAR — R$ ${selectedService.price}` : 'SELECIONE UM SERVIÇO'}
+          {isDemoMode ? 'AGENDAR INDISPONÍVEL — MODO DEMONSTRAÇÃO' : (selectedService ? `AGENDAR — R$ ${selectedService.price}` : 'SELECIONE UM SERVIÇO')}
         </button>
       </div>
 

@@ -53,6 +53,10 @@ export default function BookingPage({ shop, service, navigate }) {
   const handleConfirm = async () => {
     if (!user) { navigate('login'); return; }
     if (!selectedDate || !selectedTime || !activeShop || !activeService) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeService.id || '')) {
+      showToast('Serviço em modo demonstração. Toque em "Tentar" na tela inicial para carregar os dados reais.');
+      return;
+    }
     setConfirming(true);
     try {
       await appointmentsAPI.create({
