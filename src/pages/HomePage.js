@@ -45,12 +45,12 @@ export default function HomePage({ navigate }) {
     }
   };
 
-  const fetchFromAPI = async (searchValue, manualLocationValue, coords) => {
+  const fetchFromAPI = async (searchValue, manualLocationValue, coords, retriesLeft = 2) => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
       const params = {};
@@ -74,9 +74,15 @@ export default function HomePage({ navigate }) {
       clearTimeout(timeoutId);
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
         if (mountedRef.current) setApiStatus('timeout');
-        return;
+      } else {
+        if (mountedRef.current) setApiStatus('erro');
       }
-      if (mountedRef.current) setApiStatus('erro');
+      if (retriesLeft > 0 && mountedRef.current) {
+        setApiStatus('carregando');
+        setTimeout(() => {
+          if (mountedRef.current) fetchFromAPI(searchValue, manualLocationValue, coords, retriesLeft - 1);
+        }, 4000);
+      }
     }
   };
 
