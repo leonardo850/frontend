@@ -5,15 +5,9 @@ import { barbershopsAPI } from '../lib/api';
 import ShopCard from '../components/ShopCard';
 import { useAddressSuggestions } from '../hooks/useAddressSuggestions';
 
-const DEMO = [
-  { id: 'd1', name: 'Barbearia do Correa', address: 'Rua Sebastião Humel, 123', city: 'São José dos Campos', state: 'SP', phone: '(12) 3921-1001', latitude: -23.1885, longitude: -45.8835, is_open: true, rating: 4.8, total_reviews: 156, distance_km: null, services: [{ id: 'ds1', name: 'Corte Clássico', price: 30, duration_minutes: 30, category: 'corte' }, { id: 'ds2', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds3', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }, { id: 'ds10', name: 'Corte Feminino', price: 40, duration_minutes: 40, category: 'corte_feminino' }] },
-  { id: 'd2', name: 'Old King Barbershop', address: 'Av. São João, 789', city: 'São José dos Campos', state: 'SP', phone: '(12) 3922-2002', latitude: -23.1960, longitude: -45.8770, is_open: true, rating: 4.9, total_reviews: 203, distance_km: null, services: [{ id: 'ds4', name: 'Corte Degradê', price: 35, duration_minutes: 35, category: 'corte' }, { id: 'ds5', name: 'Barba Completa', price: 25, duration_minutes: 25, category: 'barba' }, { id: 'ds6', name: 'Corte + Barba', price: 50, duration_minutes: 50, category: 'combo' }] },
-  { id: 'd3', name: 'Barbearia São Benedito', address: 'Rua XV de Novembro, 456', city: 'São José dos Campos', state: 'SP', phone: '(12) 3923-3003', latitude: -23.1895, longitude: -45.8840, is_open: true, rating: 4.7, total_reviews: 189, distance_km: null, services: [{ id: 'ds7', name: 'Corte Tradicional', price: 28, duration_minutes: 30, category: 'corte' }, { id: 'ds8', name: 'Barba Tradicional', price: 22, duration_minutes: 25, category: 'barba' }, { id: 'ds9', name: 'Corte + Barba', price: 45, duration_minutes: 50, category: 'combo' }] },
-];
-
 export default function HomePage({ navigate }) {
   const { user } = useAuth();
-  const [shops, setShops] = useState(DEMO);
+  const [shops, setShops] = useState([]);
   const [apiStatus, setApiStatus] = useState('carregando');
   const [search, setSearch] = useState('');
   const [locationText, setLocationText] = useState('');
@@ -26,12 +20,22 @@ export default function HomePage({ navigate }) {
   const [favShops, setFavShops] = useState(() => getFavoriteIds('shop', user?.id));
   const mountedRef = useRef(true);
   const abortRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
   const { suggestions, showSuggestions, setShowSuggestions, scheduleAddressSuggestions } = useAddressSuggestions();
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2600);
   };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (abortRef.current) abortRef.current.abort();
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
 
   const geocodeAddress = async (address) => {
     try {
@@ -46,11 +50,17 @@ export default function HomePage({ navigate }) {
   };
 
   const fetchFromAPI = async (searchValue, manualLocationValue, coords, retriesLeft = 2) => {
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    let timedOut = false;
 
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    setApiStatus('carregando');
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 30000);
 
     try {
       const params = {};
@@ -61,25 +71,19 @@ export default function HomePage({ navigate }) {
       const { data } = await barbershopsAPI.getAll(params, controller.signal);
       clearTimeout(timeoutId);
 
-      if (mountedRef.current) {
-        const apiShops = data?.barbershops || [];
-        if (apiShops.length > 0) {
-          setShops(apiShops);
-          setApiStatus('ok');
-        } else {
-          setApiStatus('vazio');
-        }
-      }
+      if (!mountedRef.current || controller !== abortRef.current) return;
+
+      const apiShops = data?.barbershops || [];
+      setShops(apiShops);
+      setApiStatus(apiShops.length > 0 ? 'ok' : 'vazio');
     } catch (err) {
       clearTimeout(timeoutId);
-      if (err.name === 'CanceledError' || err.name === 'AbortError') {
-        if (mountedRef.current) setApiStatus('timeout');
-      } else {
-        if (mountedRef.current) setApiStatus('erro');
-      }
-      if (retriesLeft > 0 && mountedRef.current) {
-        setApiStatus('carregando');
-        setTimeout(() => {
+      if (!mountedRef.current || controller !== abortRef.current) return;
+
+      setShops([]);
+      setApiStatus(timedOut ? 'timeout' : 'erro');
+      if (retriesLeft > 0) {
+        retryTimeoutRef.current = setTimeout(() => {
           if (mountedRef.current) fetchFromAPI(searchValue, manualLocationValue, coords, retriesLeft - 1);
         }, 4000);
       }
@@ -99,10 +103,6 @@ export default function HomePage({ navigate }) {
   useEffect(() => {
     if (user?.address && user?.city) return;
     fetchFromAPI('', '', null);
-    return () => {
-      mountedRef.current = false;
-      if (abortRef.current) abortRef.current.abort();
-    };
   }, []);
 
   useEffect(() => {
@@ -263,7 +263,7 @@ export default function HomePage({ navigate }) {
             <span>⚠️</span>
             <span style={{ flex: 1 }}>
               {apiStatus === 'timeout' ? 'Servidor demorou a responder.' : 'API indisponível.'}
-              {' '}Exibindo dados locais.
+              {' '}Os agendamentos só ficam disponíveis quando a conexão for restabelecida.
             </span>
             <button className="btn-secondary" style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }}
               onClick={() => fetchFromAPI(search, locationApplied ? manualLocation : '', locationApplied ? locationCoords : null)}>Tentar</button>

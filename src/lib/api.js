@@ -37,8 +37,8 @@ export const authAPI = {
 export const barbershopsAPI = {
   getAll: (params, signal) => api.get('/api/barbershops', { params, signal }),
   getById: (id) => api.get(`/api/barbershops/${id}`),
-  getAvailability: (id, date, serviceId) =>
-    api.get(`/api/barbershops/${id}/availability`, { params: { date, service_id: serviceId } }),
+  getAvailability: (id, date, serviceId, signal) =>
+    api.get(`/api/barbershops/${id}/availability`, { params: { date, service_id: serviceId }, signal }),
 };
 
 // Appointments

@@ -12,6 +12,8 @@ export default function BookingPage({ shop, service, navigate }) {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [slots, setSlots] = useState([]);
+  const [availabilityError, setAvailabilityError] = useState('');
+  const [availabilityAttempt, setAvailabilityAttempt] = useState(0);
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [toast, setToast] = useState('');
@@ -33,28 +35,35 @@ export default function BookingPage({ shop, service, navigate }) {
 
   useEffect(() => {
     if (!selectedDate || !activeShop?.id || !activeService?.id) return;
+    const controller = new AbortController();
     setLoading(true);
-    barbershopsAPI.getAvailability(activeShop.id, selectedDate, activeService.id)
-      .then(({ data }) => setSlots(data.slots || []))
-      .catch(() => {
-        // Demo slots
-        const demo = [];
-        for (let h = 9; h < 18; h++) {
-          for (let m = 0; m < 60; m += 30) {
-            const t = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-            demo.push({ time: t, available: Math.random() > 0.3 });
-          }
-        }
-        setSlots(demo);
+    setSlots([]);
+    setAvailabilityError('');
+    barbershopsAPI.getAvailability(activeShop.id, selectedDate, activeService.id, controller.signal)
+      .then(({ data }) => {
+        if (!controller.signal.aborted) setSlots(data.slots || []);
       })
-      .finally(() => setLoading(false));
-  }, [selectedDate, activeShop?.id, activeService?.id]);
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setSlots([]);
+          setAvailabilityError('Não foi possível carregar os horários. Verifique a conexão e tente novamente.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [selectedDate, activeShop?.id, activeService?.id, availabilityAttempt]);
 
   const handleConfirm = async () => {
     if (!user) { navigate('login'); return; }
     if (!selectedDate || !selectedTime || !activeShop || !activeService) return;
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeService.id || '')) {
       showToast('Serviço em modo demonstração. Toque em "Tentar" na tela inicial para carregar os dados reais.');
+      return;
+    }
+    if (!slots.some(slot => slot.time === selectedTime && slot.available)) {
+      showToast('Este horário não está confirmado como disponível. Atualize os horários e tente novamente.');
       return;
     }
     setConfirming(true);
@@ -69,8 +78,9 @@ export default function BookingPage({ shop, service, navigate }) {
       setTimeout(() => navigate('appointments'), 1500);
     } catch (err) {
       showToast(err.response?.data?.error || 'Erro ao agendar. Tente novamente.');
+    } finally {
+      setConfirming(false);
     }
-    setConfirming(false);
   };
 
   return (
@@ -111,6 +121,17 @@ export default function BookingPage({ shop, service, navigate }) {
         <div className="section-title" style={{ marginBottom: 12 }}>Horários disponíveis</div>
         {loading ? (
           <div className="loading"><div className="spinner" /><span>Carregando horários...</span></div>
+        ) : availabilityError ? (
+          <div style={{ marginBottom: 24, color: 'var(--red)', fontSize: 13 }}>
+            {availabilityError}{' '}
+            <button className="btn-secondary" onClick={() => setAvailabilityAttempt(attempt => attempt + 1)}>
+              Tentar novamente
+            </button>
+          </div>
+        ) : slots.length === 0 ? (
+          <div style={{ marginBottom: 24, color: 'var(--muted)', fontSize: 13 }}>
+            Nenhum horário disponível nesta data.
+          </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 24 }}>
             {slots.map(slot => (
