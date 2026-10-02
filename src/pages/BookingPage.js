@@ -168,7 +168,7 @@ export default function BookingPage({ shop, service, navigate }) {
         )}
 
         <button className="btn-primary"
-          disabled={!selectedDate || !selectedTime || confirming || !activeShop || !activeService}
+          disabled={!selectedDate || !selectedTime || confirming || !activeShop || !activeService || !slots.some(slot => slot.time === selectedTime && slot.available)}
           onClick={handleConfirm}>
           {confirming ? 'CONFIRMANDO...' : !user ? 'ENTRAR PARA AGENDAR' : 'CONFIRMAR AGENDAMENTO'}
         </button>

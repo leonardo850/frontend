@@ -97,9 +97,9 @@ export default function CompanyPage({ navigate }) {
 
   const getDefaultHours = () => DAY_NAMES.map((_, index) => ({
     day_of_week: index,
-    is_open: index < 5,
+    is_open: index !== 0,
     open_time: '09:00',
-    close_time: '18:00',
+    close_time: index === 6 ? '13:00' : '19:00',
   }));
 
   const handleToggleDayOpen = (index, isOpen) => {

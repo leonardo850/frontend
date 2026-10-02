@@ -29,7 +29,11 @@ export const authAPI = {
   login: (data) => api.post('/api/auth/login', data),
   forgotPassword: (data) => api.post('/api/auth/forgot', data),
   resetPassword: (data) => api.post('/api/auth/reset', data),
-  changePassword: (data) => api.patch('/api/auth/password', data),
+  changePassword: async (data) => {
+    const response = await api.patch('/api/auth/password', data);
+    if (response.data?.token) localStorage.setItem('lebux_token', response.data.token);
+    return response;
+  },
   updateProfile: (data) => api.patch(`${api.defaults.baseURL.replace(/\/$/, '')}/api/auth/profile`, data),
 };
 
